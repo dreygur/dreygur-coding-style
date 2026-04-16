@@ -1,0 +1,10 @@
+{
+  "name": "dreygur-coding-style",
+  "description": "dreygur's personal coding style guide for Go, TypeScript, JavaScript, Rust, and Python. Encodes architecture patterns, naming conventions, error handling, logging, and project structure derived from dreygur's open-source projects.",
+  "author": {
+    "name": "dreygur",
+    "email": "ryeasin03@gmail.com"
+  },
+  "version": "1.0.0",
+  "homepage": "https://github.com/dreygur/dreygur-coding-style"
+}
