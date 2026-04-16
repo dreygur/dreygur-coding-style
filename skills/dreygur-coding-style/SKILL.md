@@ -198,6 +198,38 @@ export * from "./errors.js";
 
 `async/await` everywhere. Never raw `.then()/.catch()` chains unless there is a specific reason.
 
+### Log Prefix Convention (even without a logger utility)
+
+The `[+] / [-] / [!]` prefix notation carries over from Go even in plain JS/TS scripts:
+
+```ts
+console.log(`[+] Waiting for new pair creation...`);
+console.log(`[-] ${err.message}`);
+console.log(`[+] Received signal: ${signal} Exiting...`);
+```
+
+### Graceful Shutdown in Node.js Scripts
+
+```ts
+process.on('SIGINT', (signal) => {
+  console.log(`[+] Received signal: ${signal} Exiting...`);
+  process.exit(0);
+});
+
+process.on('SIGHUP', (signal) => {
+  console.log(`[+] Received signal: ${signal} Exiting...`);
+  process.exit(0);
+});
+```
+
+### Script Entry Point (IIFE)
+
+For standalone scripts, wrap the async entry in an IIFE:
+
+```ts
+(async () => await main())();
+```
+
 ### Default Object Merging
 
 ```ts
@@ -231,26 +263,41 @@ async refreshIfNeeded(): Promise<OAuthAuthDetails> {
 
 ### Project Structure
 
+**Libraries** — flat package layout:
 ```
 project/
-├── main.go               # or cmd/main.go; bin/main.go for libraries
+├── main.go               # or bin/main.go
 ├── go.mod / go.sum
 ├── Makefile
 ├── sample.env            # or sample_config.json — never commit secrets
 ├── models/
-│   ├── requests.go
-│   └── responses.go
 ├── methods/
-│   ├── interface.go      # interface defined here
-│   └── token.go          # implementations
-├── hooks/                # or middleware/
+│   ├── interface.go
+│   └── token.go
+├── hooks/
 ├── handlers/
 ├── events/
-├── lib/                  # shared state, config, logging
+├── lib/
 ├── utils/
-├── db/ or database/
-├── repo/
+├── db/
 └── tests/
+```
+
+**Applications** — `internal/` layout:
+```
+project/
+├── main.go
+├── go.mod / go.sum
+├── Makefile
+├── .env.example
+└── internal/
+    ├── models/      # shared types
+    ├── config/      # config loading
+    ├── ai/          # service layer (generator, providers)
+    ├── discord/     # handler/bot layer
+    ├── google/      # external API client
+    ├── store/       # repository layer
+    └── worker/      # background workers
 ```
 
 ### Interface First
@@ -283,13 +330,90 @@ func GetBkash(username, password, appKey, appSecret string, isLive bool) methods
 
 ### Error Handling
 
+Validate early with sentinel errors. Wrap errors with context using `%w`:
+
 ```go
 if !utils.RequireNonEmpty(b.AppKey, b.AppSecret) {
     return nil, common.ErrEmptyRequiredField
 }
-body, err := hooks.DoRequest(payload)
+
+reviews, err := p.googleClient.GetReviews(ctx)
 if err != nil {
-    return nil, err
+    return fmt.Errorf("fetch reviews: %w", err)
+}
+
+if err := p.discordBot.SendApprovalRequest(approval); err != nil {
+    return fmt.Errorf("send discord notification: %w", err)
+}
+```
+
+Use bare `return nil, err` when no context is needed; use `fmt.Errorf("context: %w", err)` when the call site adds meaningful information.
+
+### Typed String Constants
+
+Use typed string constants instead of plain strings for domain statuses and kinds:
+
+```go
+type ApprovalStatus string
+
+const (
+    StatusPending  ApprovalStatus = "pending"
+    StatusApproved ApprovalStatus = "approved"
+    StatusRejected ApprovalStatus = "rejected"
+    StatusExpired  ApprovalStatus = "expired"
+)
+```
+
+### Constructors That Can Fail
+
+When initialization involves I/O or validation, return `(*Type, error)`:
+
+```go
+func NewBot(token, channelID string, allowedUsers []string) (*Bot, error) {
+    session, err := discordgo.New("Bot " + token)
+    if err != nil {
+        return nil, fmt.Errorf("create discord session: %w", err)
+    }
+    return &Bot{session: session, channelID: channelID}, nil
+}
+```
+
+### Concurrent-Safe Structs
+
+Embed `sync.Mutex` or `sync.RWMutex` directly in structs that are shared across goroutines:
+
+```go
+type Bot struct {
+    session        *discordgo.Session
+    mu             sync.RWMutex
+    pendingReviews map[string]*models.PendingApproval
+}
+
+func (b *Bot) isUserAllowed(userID string) bool {
+    b.mu.RLock()
+    defer b.mu.RUnlock()
+    return b.allowedUsers[userID]
+}
+```
+
+### Primary + Fallbacks Pattern
+
+For pluggable providers, store a primary and an ordered fallback list:
+
+```go
+type Generator struct {
+    providers map[string]Provider
+    primary   string
+    fallbacks []string
+}
+
+// Try primary first, then each fallback in order
+providerOrder := append([]string{g.primary}, g.fallbacks...)
+for _, name := range providerOrder {
+    resp, err := providers[name].Generate(ctx, req)
+    if err == nil {
+        return resp, nil
+    }
 }
 ```
 
@@ -392,6 +516,46 @@ pub type Result<T> = std::result::Result<T, AppError>;
 
 /// Initializes a new WebDriver session and returns the driver handle.
 pub fn init() -> Driver {
+```
+
+### Error Type in Binaries
+
+Both `anyhow::Result` and `eyre::Result` are acceptable in binary entry points — use whichever fits the project's existing dependency:
+
+```rust
+// anyhow
+#[tokio::main]
+async fn main() -> anyhow::Result<()> { ... }
+
+// eyre (preferred in newer projects)
+#[tokio::main]
+async fn main() -> eyre::Result<()> { ... }
+```
+
+### Shared State with Arc
+
+Always use `Arc::clone(&x)` explicitly (not `.clone()`) when sharing across tasks:
+
+```rust
+let store = Arc::new(Store::new());
+let config = Arc::new(Config::from_args());
+
+tokio::spawn(async move {
+    let store = Arc::clone(&store);
+    server::handle_connection(stream, store, config).await
+});
+```
+
+### Concurrent Events with tokio::select!
+
+```rust
+loop {
+    tokio::select! {
+        Some(event) = device_events.next() => { ... }
+        Some((addr, change)) = all_change_events.next() => { ... }
+        _ = sleep(Duration::from_secs(30)) => { /* periodic update */ }
+    }
+}
 ```
 
 ### CLI with Clap
