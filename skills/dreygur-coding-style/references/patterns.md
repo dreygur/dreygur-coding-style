@@ -220,6 +220,44 @@ wp_enqueue_script('my-handle', $src, [], time(), true);
 - Missing `type="module"` on Vite/ES module scripts — use `script_loader_tag` filter
 - Using `Options API` in Vue SFCs — always `<script setup>` (Composition API)
 
+### PHP CLI (Symfony Console) Patterns
+
+#### Multi-path Autoload Discovery
+
+```php
+foreach ([
+    __DIR__ . '/../../vendor/autoload.php',
+    __DIR__ . '/../../../../autoload.php',
+    'vendor/autoload.php',
+] as $file) {
+    if (file_exists($file)) { require $file; break; }
+}
+```
+
+Handles both global (`~/.composer/vendor`) and local installs.
+
+#### Typed Question Dispatch
+
+Never string-compare question type — use class constants:
+
+```php
+const QUESTION_INPUT        = 1;
+const QUESTION_CONFIRMATION = 2;
+const QUESTION_CHOICE       = 3;
+```
+
+Private `ask()` method switches on the constant — callers never touch Symfony Question classes directly.
+
+### Anti-Patterns to Avoid (PHP CLI)
+
+- `echo` in commands — use `$output->writeln()`
+- Missing `set_time_limit(0)` in CLI entry
+- No shebang (`#!/usr/bin/env php`) in bin file
+- bin file not listed in `composer.json` `"bin"` key
+- Question logic scattered inline — always a private `ask()` helper
+- Not storing `$input`/`$output` as properties when helpers need them
+- Not stripping unused Symfony Console options (override `getDefaultInputDefinition()`)
+
 ---
 
 ## Go

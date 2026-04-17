@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
 description: This skill should be used when writing any code for dreygur — Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel. Use when the user asks to "write code in my style", "follow my coding patterns", "use my architecture", "create a new project", "add a service", "add a repository", "write a handler", or whenever generating code that should match dreygur's established patterns. Also use when reviewing existing code for style violations.
-version: 2.4.0
+version: 2.5.0
 ---
 
 # dreygur Coding Style Guide
@@ -1256,6 +1256,158 @@ export default defineConfig({
 - Always `wp_localize_script` to pass PHP data; never hardcode URLs/nonces in JS
 - `<script setup>` syntax in all SFCs
 - Dev uses Vite HMR server URL; prod points to built dist file
+
+---
+
+### PHP CLI Tools (Symfony Console)
+
+#### Project Structure
+
+```
+tool-name/
+├── bin/
+│   └── toolname          # CLI entry point (#!/usr/bin/env php)
+├── src/
+│   ├── Commands/
+│   │   ├── InstallCommand.php
+│   │   └── StartCommand.php
+│   └── Extensions/
+│       └── ToolApplication.php   # extends Application
+├── composer.json
+└── box.json              # box/phar config if distributing as phar
+```
+
+#### CLI Entry Point (`bin/`)
+
+Shebang + autoload path fallback array (works standalone and as Composer dep) + `set_time_limit(0)`:
+
+```php
+#!/usr/bin/env php
+<?php
+
+set_time_limit(0);
+
+use Vendor\Tool\Commands\InstallCommand;
+use Vendor\Tool\Extensions\ToolApplication;
+
+$files = [
+    __DIR__ . '/../../vendor/autoload.php',
+    __DIR__ . '/../../../../autoload.php',
+    __DIR__ . '/../../../autoload.php',
+    '../vendor/autoload.php',
+    'vendor/autoload.php',
+];
+
+foreach ($files as $file) {
+    if (file_exists($file)) {
+        require $file;
+        define('COMPOSER_INSTALLED', 1);
+        break;
+    }
+}
+
+$app = new ToolApplication('My CLI Tool', 'v1.0.0');
+$app->add(new InstallCommand);
+$app->run();
+```
+
+Register as binary in `composer.json`:
+```json
+{
+  "bin": ["bin/toolname"],
+  "require": { "symfony/console": "^5.2" },
+  "autoload": { "psr-4": { "Vendor\\Tool\\": "src/" } }
+}
+```
+
+#### Custom Application — Strip Unused Options
+
+Extend `Application` and override `getDefaultInputDefinition()` to remove `--quiet`, `--version`, `--ansi`, etc. — keep only what the tool actually uses:
+
+```php
+class ToolApplication extends Application {
+    protected function getDefaultInputDefinition(): InputDefinition {
+        return new InputDefinition([
+            new InputArgument('command', InputArgument::REQUIRED, 'Command to execute'),
+            new InputOption('--help', '-h', InputOption::VALUE_NONE, 'Display help'),
+        ]);
+    }
+}
+```
+
+#### Command Structure
+
+One class per command in `src/Commands/`. Store `$input`/`$output` as instance properties when private helpers need them:
+
+```php
+class InstallCommand extends Command {
+    // Typed question type constants on the command class
+    const QUESTION_CONFIRMATION = 1;
+    const QUESTION_INPUT        = 2;
+    const QUESTION_CHOICE       = 3;
+
+    private $input;
+    private $output;
+
+    protected function configure(): void {
+        $this->setName('install')
+             ->setDescription('Install the project')
+             ->addArgument('name', InputArgument::REQUIRED, 'Project name');
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int {
+        $this->input  = $input;
+        $this->output = $output;
+
+        $name = $this->ask('Enter project name:', self::QUESTION_INPUT, 'myproject');
+        $confirm = $this->ask('Proceed with installation?', self::QUESTION_CONFIRMATION, 'yes');
+
+        if ($confirm === 'yes') {
+            $output->writeln('Installing...');
+            // ...
+        }
+        return Command::SUCCESS;
+    }
+
+    private function ask(string $question, int $type, string $default = '', array $options = []): string {
+        $helper = $this->getHelper('question');
+        $q = match($type) {
+            self::QUESTION_INPUT        => new Question($question, $default),
+            self::QUESTION_CONFIRMATION => new ChoiceQuestion($question, ['yes', 'no'], $default),
+            self::QUESTION_CHOICE       => new ChoiceQuestion($question, $options, $default),
+        };
+        return $helper->ask($this->input, $this->output, $q);
+    }
+}
+```
+
+Use `$output->writeln()` — never `echo`. Return `Command::SUCCESS` (0) or `Command::FAILURE` (1).
+
+#### Cross-Platform OS Detection
+
+```php
+$isWindows = in_array(PHP_OS, ['WIN32', 'Windows', 'WINNT']);
+if ($isWindows) {
+    passthru("php -S {$domain}:80 -t {$domain}/");
+} else {
+    passthru("sudo php -S {$domain}:80 -t {$domain}/");
+}
+```
+
+Use `passthru()` for long-running subprocesses that need live stdout/stderr output.
+
+#### State Persistence as JSON
+
+Store per-site or per-project state in a JSON file alongside the data:
+
+```php
+file_put_contents("{$name}.json", json_encode([
+    'domain' => $domain,
+    'created_at' => date('c'),
+], JSON_PRETTY_PRINT));
+```
+
+Check existence before overwriting: `if (file_exists("{$name}.json")) { ... }`.
 
 ---
 
