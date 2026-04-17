@@ -144,7 +144,7 @@ protected function getModelsWithTrait($trait): array {
 }
 ```
 
-### Anti-Patterns to Avoid (PHP)
+### Anti-Patterns to Avoid (PHP / Laravel)
 
 - Business logic in `register()` — only bindings there
 - Hardcoded strings where config key + default should be used
@@ -154,6 +154,47 @@ protected function getModelsWithTrait($trait): array {
 - `echo` / `var_dump` in library code
 - No PHPDoc on public methods
 - Missing `runningInConsole()` guard before registering commands
+
+### WordPress Plugin Patterns
+
+#### Hook Registration Location
+
+All hooks/filters in `__construct()` of the `Init` class or `init_hooks()` of the main class — never scattered across files:
+
+```php
+public function __construct() {
+    add_filter('tutor_gateways_with_class', [self::class, 'add_gateways']);
+    add_filter('tutor_payment_methods', [$this, 'add_method'], 100);
+    add_action('init', [$this, 'process_form']);
+}
+```
+
+#### Static vs Instance Methods on Hooks
+
+- `[self::class, 'method']` — for static methods on filters that need no instance state
+- `[$this, 'method']` — for instance methods that need object properties
+
+#### Plugin Constants Pattern
+
+```php
+define('PLUGIN_VERSION', '1.0.0');
+define('PLUGIN_URL', plugin_dir_url(__FILE__));
+define('PLUGIN_PATH', plugin_dir_path(__FILE__));
+```
+
+Prefix all constants with plugin slug: `TSPAY_VERSION`, `TSPAY_URL`, `TSPAY_PATH`.
+
+### Anti-Patterns to Avoid (PHP / WordPress)
+
+- Missing `defined('ABSPATH') || exit` at top of file
+- Raw `$_POST`/`$_GET` — always `sanitize_text_field(wp_unslash(...))`
+- User-facing strings without `__('string', 'text-domain')`
+- `curl_*` / Guzzle for HTTP — use `wp_remote_post()` / `wp_remote_get()`
+- `error_log()` without `WP_DEBUG` guard
+- `catch (Exception $e)` — use `catch (Throwable $e)` for PHP 7+
+- Non-final main plugin class
+- Multiple plugin singletons — one main class, one `get_instance()`
+- Hooks registered outside `__construct()` or `init_hooks()`
 
 ---
 

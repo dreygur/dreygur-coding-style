@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
 description: This skill should be used when writing any code for dreygur — Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel. Use when the user asks to "write code in my style", "follow my coding patterns", "use my architecture", "create a new project", "add a service", "add a repository", "write a handler", or whenever generating code that should match dreygur's established patterns. Also use when reviewing existing code for style violations.
-version: 2.2.0
+version: 2.3.0
 ---
 
 # dreygur Coding Style Guide
@@ -926,9 +926,215 @@ def set_mode(is_sandbox: bool) -> str:
 
 ---
 
-## PHP / Laravel
+## PHP
 
-### Package Structure
+### WordPress Plugins
+
+#### Plugin File Header
+
+Every WP plugin starts with the standard header block + security guard:
+
+```php
+<?php
+/**
+ * Plugin Name:    MyPlugin
+ * Plugin URI:     https://github.com/user/myplugin
+ * Description:    One-line description.
+ * Version:        1.0.0
+ * Author:         Name
+ * Author URI:     https://github.com/user
+ * License:        GPLv2 or later
+ * Text Domain:    myplugin
+ * Domain Path:    /languages
+ */
+
+defined('ABSPATH') || exit;
+```
+
+`defined('ABSPATH') || exit` — top of **every** PHP file in a plugin.
+
+#### Main Plugin Class (Singleton)
+
+Main class is `final`, uses a `get_instance()` singleton, private constructor, and splits `init()` into private methods:
+
+```php
+final class MyPlugin {
+    private static $instance = null;
+
+    public static function get_instance(): self {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    private function __construct() {
+        $this->init();
+    }
+
+    private function init(): void {
+        $this->load_dependencies();
+        $this->define_constants();
+        $this->init_hooks();
+    }
+
+    private function load_dependencies(): void {
+        require_once __DIR__ . '/vendor/autoload.php';
+    }
+
+    private function define_constants(): void {
+        define('MYPLUGIN_VERSION', '1.0.0');
+        define('MYPLUGIN_URL', plugin_dir_url(__FILE__));
+        define('MYPLUGIN_PATH', plugin_dir_path(__FILE__));
+    }
+
+    private function init_hooks(): void {
+        add_action('plugins_loaded', [$this, 'init_feature'], 100);
+    }
+}
+
+MyPlugin::get_instance();
+```
+
+#### Separate Init Class Per Feature
+
+`final class Init` for each feature — registers all hooks/filters in its constructor:
+
+```php
+final class Init {
+    public function __construct() {
+        add_filter('plugin_gateways', [self::class, 'add_gateways']);
+        add_filter('plugin_payment_methods', [$this, 'add_payment_method'], 100);
+        add_action('init', [$this, 'process_form_submission']);
+    }
+}
+```
+
+#### Constants for Config and Status Maps
+
+Use `private const` arrays for config groups and status mappings — never inline strings:
+
+```php
+private const GATEWAY_CONFIG = [
+    'sslcommerz' => [
+        'gateway_class' => SslcommerzGateway::class,
+        'config_class'  => SslcommerzConfig::class,
+    ],
+];
+
+private const STATUS_MAP = [
+    'VALID'     => 'paid',
+    'VALIDATED' => 'paid',
+    'FAILED'    => 'failed',
+    'CANCELLED' => 'cancelled',
+    'PENDING'   => 'pending',
+];
+
+private function mapStatus(string $status): string {
+    return self::STATUS_MAP[$status] ?? 'failed';
+}
+```
+
+#### WordPress HTTP API (not curl/Guzzle)
+
+Always `wp_remote_post()` / `wp_remote_get()` for HTTP in plugins. Check `is_wp_error()` first:
+
+```php
+$response = wp_remote_post($url, [
+    'timeout'     => 60,
+    'httpversion' => '1.1',
+    'sslverify'   => !$isSandbox,
+    'body'        => $data,
+]);
+
+if (is_wp_error($response)) {
+    return ['status' => 'FAILED', 'reason' => $response->get_error_message()];
+}
+
+$code = wp_remote_retrieve_response_code($response);
+$body = wp_remote_retrieve_body($response);
+```
+
+#### Input Sanitization
+
+Always `sanitize_text_field(wp_unslash($value))` on incoming POST data — never use raw `$_POST`:
+
+```php
+$sanitized = [];
+foreach ($_POST as $key => $value) {
+    $sanitized[$key] = is_array($value)
+        ? array_map('sanitize_text_field', array_map('wp_unslash', $value))
+        : sanitize_text_field(wp_unslash($value));
+}
+```
+
+#### i18n — All User-Facing Strings
+
+Every user-facing string through `__('String', 'text-domain')`. Never raw string literals in output:
+
+```php
+throw new \InvalidArgumentException(__('Order ID is required', 'myplugin'));
+$label = __('Store Password', 'myplugin');
+```
+
+#### Debug Logging Gated on WP_DEBUG
+
+```php
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    error_log('MyPlugin error: ' . $error->getMessage());
+}
+```
+
+#### Catch Throwable, Not Exception
+
+PHP 7+ — always `catch (Throwable $error)` to catch both errors and exceptions:
+
+```php
+try {
+    $this->processPayment($data);
+} catch (Throwable $error) {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('Payment error: ' . $error->getMessage());
+    }
+    $result->status = 'failed';
+    $result->reason = $error->getMessage();
+    return $result;
+}
+```
+
+#### Validate Early, Throw InvalidArgumentException
+
+```php
+if (!isset($data->order_id) || empty($data->order_id)) {
+    throw new \InvalidArgumentException(__('Order ID is required', 'myplugin'));
+}
+if ($amount <= 0) {
+    throw new \InvalidArgumentException(__('Amount must be greater than zero', 'myplugin'));
+}
+```
+
+#### Plugin Structure
+
+```
+plugin-name/
+├── plugin-name.php       # plugin header + singleton main class
+├── integration/
+│   ├── Init.php          # hook registration
+│   ├── Gateway.php       # extends GatewayBase
+│   └── Config.php        # gateway config class
+├── payments/
+│   └── Provider/
+│       └── Provider.php  # extends BasePayment
+├── assets/
+├── vendor/               # Composer autoload
+└── composer.json
+```
+
+---
+
+### Laravel Packages
+
+#### Package Structure
 
 ```
 package-name/
@@ -953,7 +1159,7 @@ package-name/
 └── composer.json
 ```
 
-### ServiceProvider Pattern
+#### ServiceProvider Pattern
 
 Split `boot()` into protected methods — one per concern. Never write business logic directly in `register()`/`boot()`:
 
@@ -984,7 +1190,7 @@ class PackageServiceProvider extends ServiceProvider {
 }
 ```
 
-### Config-Driven Design
+#### Config-Driven Design
 
 **Every configurable value uses `config('package.key', 'default')`** — never hardcode. This makes the package usable without touching the source:
 
@@ -994,7 +1200,7 @@ $adminRoles = config('tyro-dashboard.admin_roles', ['admin', 'super-admin']);
 $disk = config('tyro-dashboard.uploads.disk', 'public');
 ```
 
-### Abstract BaseController
+#### Abstract BaseController
 
 Always an abstract base in packages with `protected` helpers for shared logic:
 
@@ -1021,12 +1227,12 @@ abstract class BaseController extends Controller {
 }
 ```
 
-### Concerns vs Traits
+#### Concerns vs Traits
 
 - `Concerns/` — Eloquent-related traits that add model behaviour (CRUD config, resource introspection)
 - `Traits/` — general PHP traits (profile photo, file handling)
 
-### HasCrud Concern
+#### HasCrud Concern
 
 Models include a `HasCrud` trait to expose resource configuration for admin interfaces. The trait auto-detects fields from `$fillable` + DB schema, detects relationships via Reflection:
 
@@ -1051,7 +1257,7 @@ trait HasCrud {
 }
 ```
 
-### Caching Pattern
+#### Caching Pattern
 
 Use `Cache::get/put` with a content-hash key to avoid stale cache on schema changes. Always clear old hash on update:
 
@@ -1063,7 +1269,7 @@ $fields = static::generateFields($instance);
 Cache::put($cacheKey, $fields, 21600); // 6 hours
 ```
 
-### Route Groups
+#### Route Groups
 
 Routes go in `routes/web.php`, loaded via ServiceProvider with config-driven prefix and middleware:
 
@@ -1085,7 +1291,7 @@ if (!config('package.disable_examples', false) && !app()->environment('productio
 }
 ```
 
-### Granular Publishing
+#### Granular Publishing
 
 Never one giant publish group. Separate groups for each concern so users only publish what they need:
 
@@ -1098,7 +1304,7 @@ $this->publishes([$viewsPath.'/partials/scripts.blade.php' => ...], 'package-scr
 $this->publishes([...config + views...], 'package');
 ```
 
-### Middleware Registration
+#### Middleware Registration
 
 Alias middleware in ServiceProvider, don't rely on kernel registration:
 
@@ -1110,7 +1316,7 @@ protected function registerMiddleware(): void {
 }
 ```
 
-### View Composers
+#### View Composers
 
 Share common data with all package views via composers — never pass it from every controller:
 
@@ -1121,7 +1327,7 @@ View::composer(['package::*', 'dashboard.*'], function ($view) {
 });
 ```
 
-### Console Commands
+#### Console Commands
 
 One class per Artisan command. All registered in ServiceProvider, guarded by `runningInConsole()`:
 
@@ -1137,7 +1343,7 @@ protected function registerCommands(): void {
 }
 ```
 
-### PHPDoc Comments
+#### PHPDoc Comments
 
 Every public method gets a PHPDoc with `@param` and `@return`:
 
@@ -1151,7 +1357,7 @@ Every public method gets a PHPDoc with `@param` and `@return`:
 public function updateProfilePhoto($photo): void {
 ```
 
-### Naming Conventions
+#### Naming Conventions
 
 - Classes: `PascalCase` with role suffix — `ResourceController`, `EnsureIsAdmin`, `HasCrud`, `HasProfilePhoto`
 - Methods: `camelCase` — `getResourceConfig()`, `registerViewComposers()`
