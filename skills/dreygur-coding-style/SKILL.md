@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
 description: This skill should be used when writing any code for dreygur — Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel. Use when the user asks to "write code in my style", "follow my coding patterns", "use my architecture", "create a new project", "add a service", "add a repository", "write a handler", or whenever generating code that should match dreygur's established patterns. Also use when reviewing existing code for style violations.
-version: 2.3.0
+version: 2.4.0
 ---
 
 # dreygur Coding Style Guide
@@ -1129,6 +1129,133 @@ plugin-name/
 ├── vendor/               # Composer autoload
 └── composer.json
 ```
+
+#### Minimal Plugins — No Singleton Required
+
+Simple, single-responsibility plugins skip the singleton and use direct `new ClassName()`:
+
+```php
+<?php
+/**
+ * Plugin Name: Single Session
+ * ...
+ */
+
+if (!defined('ABSPATH')) { exit; }
+
+class SingleSession {
+    public function __construct() {
+        add_action('wp_login', [$this, 'force_single_session_on_login'], 10, 2);
+    }
+
+    public function force_single_session_on_login($user_login, $user) {
+        if (is_a($user, 'WP_User')) {
+            $sessions = get_user_meta($user->ID, 'session_tokens', true);
+            if ($sessions && is_array($sessions)) {
+                update_user_meta($user->ID, 'session_tokens', array_slice($sessions, -1));
+            }
+        }
+    }
+}
+
+new SingleSession();
+```
+
+Use singleton only when the plugin has multiple subsystems or needs instance reuse. Single-action plugins: just `new ClassName()`.
+
+#### WordPress Admin UI with Vue 3 + Vite
+
+For admin pages with interactive UI, use Vue 3 + Vite. The admin page PHP outputs a single mount div; Vue owns everything inside.
+
+**PHP side:**
+```php
+class WPVue {
+    function __construct() {
+        add_action('admin_enqueue_scripts', [$this, 'loadAssets']);
+        add_action('admin_menu', [$this, 'adminMenu']);
+        // Filter to inject type="module" on the script tag
+        add_filter('script_loader_tag', [$this, 'loadScriptAsModule'], 10, 3);
+    }
+
+    function loadScriptAsModule($tag, $handle, $src) {
+        if ('wp-vue-core' !== $handle) return $tag;
+        return '<script type="module" src="' . esc_url($src) . '"></script>';
+    }
+
+    function adminMenu() {
+        add_menu_page('MyPlugin', 'MyPlugin', 'manage_options', 'myplugin/admin.php', [$this, 'loadAdminPage'], 'dashicons-admin-generic', 6);
+    }
+
+    function loadAdminPage() {
+        include_once plugin_dir_path(__FILE__) . '/wp-src/admin/admin.php';
+    }
+
+    function loadAssets() {
+        // Dev: Vite HMR server. Prod: point to built dist/assets/main.js
+        wp_enqueue_script('wp-vue-core', '//localhost:5173/src/main.js', [], time(), true);
+        // Pass PHP data to Vue via global object
+        wp_localize_script('wp-vue-core', 'myplugin', [
+            'url'   => plugin_dir_url(__FILE__),
+            'nonce' => wp_create_nonce('wp_rest'),
+            'api'   => get_rest_url(),
+        ]);
+    }
+}
+new WPVue();
+```
+
+**Admin page template** — just the mount point:
+```html
+<div class="wrap">
+    <div id="app"></div>
+</div>
+```
+
+**Vue entry (`src/main.js`):**
+```js
+import { createApp } from 'vue';
+import App from './App.vue';
+import './style.css';
+
+createApp(App).mount('#app');
+```
+
+**Access localized data in Vue:**
+```vue
+<script setup>
+// window.myplugin is set by wp_localize_script
+const pluginUrl = window.myplugin.url;
+const apiUrl = window.myplugin.api;
+</script>
+```
+
+**`vite.config.js`:**
+```js
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+
+export default defineConfig({
+  plugins: [vue()],
+});
+```
+
+**`package.json`** uses `"type": "module"` and minimal deps:
+```json
+{
+  "name": "wp-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "vite", "build": "vite build" },
+  "dependencies": { "vue": "^3.x" },
+  "devDependencies": { "@vitejs/plugin-vue": "^4.x", "vite": "^4.x" }
+}
+```
+
+**Key rules:**
+- Use `script_loader_tag` filter to add `type="module"` — WP doesn't do this natively
+- Always `wp_localize_script` to pass PHP data; never hardcode URLs/nonces in JS
+- `<script setup>` syntax in all SFCs
+- Dev uses Vite HMR server URL; prod points to built dist file
 
 ---
 

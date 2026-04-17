@@ -184,6 +184,27 @@ define('PLUGIN_PATH', plugin_dir_path(__FILE__));
 
 Prefix all constants with plugin slug: `TSPAY_VERSION`, `TSPAY_URL`, `TSPAY_PATH`.
 
+### WordPress + Vue 3 Script Module Pattern
+
+WP's `wp_enqueue_script` outputs `<script src>` not `<script type="module" src>`. Use `script_loader_tag` filter to fix:
+
+```php
+add_filter('script_loader_tag', function($tag, $handle, $src) {
+    if ('my-handle' !== $handle) return $tag;
+    return '<script type="module" src="' . esc_url($src) . '"></script>';
+}, 10, 3);
+```
+
+### Dev vs Prod Asset URL
+
+```php
+$isDev = defined('WP_DEBUG') && WP_DEBUG;
+$src = $isDev
+    ? '//localhost:5173/src/main.js'       // Vite HMR
+    : plugin_dir_url(__FILE__) . 'dist/assets/main.js'; // Built
+wp_enqueue_script('my-handle', $src, [], time(), true);
+```
+
 ### Anti-Patterns to Avoid (PHP / WordPress)
 
 - Missing `defined('ABSPATH') || exit` at top of file
@@ -192,9 +213,12 @@ Prefix all constants with plugin slug: `TSPAY_VERSION`, `TSPAY_URL`, `TSPAY_PATH
 - `curl_*` / Guzzle for HTTP — use `wp_remote_post()` / `wp_remote_get()`
 - `error_log()` without `WP_DEBUG` guard
 - `catch (Exception $e)` — use `catch (Throwable $e)` for PHP 7+
-- Non-final main plugin class
+- Non-final main plugin class (for complex plugins)
 - Multiple plugin singletons — one main class, one `get_instance()`
 - Hooks registered outside `__construct()` or `init_hooks()`
+- Hardcoded URLs or nonces in JS — always `wp_localize_script`
+- Missing `type="module"` on Vite/ES module scripts — use `script_loader_tag` filter
+- Using `Options API` in Vue SFCs — always `<script setup>` (Composition API)
 
 ---
 
