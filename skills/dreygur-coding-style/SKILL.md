@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
 description: This skill should be used when writing any code for dreygur — Go, TypeScript, JavaScript, Rust, or Python. Use when the user asks to "write code in my style", "follow my coding patterns", "use my architecture", "create a new project", "add a service", "add a repository", "write a handler", or whenever generating code that should match dreygur's established patterns. Also use when reviewing existing code for style violations.
-version: 2.0.0
+version: 2.1.0
 ---
 
 # dreygur Coding Style Guide
@@ -256,6 +256,204 @@ Every exported function, class, and interface:
  */
 async refreshIfNeeded(): Promise<OAuthAuthDetails> {
 ```
+
+### Branded Types for Entity IDs
+
+Use `Brand<T, 'Name'>` to prevent accidental ID type confusion. Zero runtime cost — erased at compile time.
+
+```ts
+export type Brand<T, Brand extends string> = T & { __brand: Brand };
+
+export function asBrand<T extends Brand<any, any>>(value: any): T {
+  return value as T;
+}
+
+export function assertValidId<T extends Brand<string, any>>(
+  value: unknown,
+  idType: string,
+): T {
+  if (!isValidUUID(value)) {
+    throw new Error(`Invalid ${idType}: expected UUID format, got ${typeof value === 'string' ? value : typeof value}`);
+  }
+  return value as T;
+}
+
+// Define one branded type per entity
+export type UserId = Brand<string, 'UserId'>;
+export type OrganizationId = Brand<string, 'OrganizationId'>;
+```
+
+Never use plain `string` for entity IDs in function signatures — always use the specific branded type.
+
+### Drizzle ORM Schema Pattern
+
+Co-locate type exports and Zod schemas with the table definition:
+
+```ts
+import { pgTable, varchar, uuid, boolean } from 'drizzle-orm/pg-core';
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
+import { timestamps } from './utils';
+
+export const users = pgTable('user', {
+  id: uuid('id').notNull().primaryKey().defaultRandom(),
+  email: varchar('email').notNull().unique(),
+  ...timestamps,
+});
+
+export type TUser = typeof users.$inferSelect;
+export type TUserInsert = typeof users.$inferInsert;
+
+export const ZUserCreate = createInsertSchema(users);
+export const ZUserUpdate = createUpdateSchema(users);
+export const ZUserSelect = createSelectSchema(users);
+```
+
+### Base Repository Pattern
+
+Abstract generic base with typed IDs, soft delete, and transaction support:
+
+```ts
+export abstract class BaseRepository<
+  T extends AnyPgTable & { id: any },
+  TId extends string = string,
+> {
+  constructor(
+    protected readonly db: NodePgDatabase,
+    protected readonly table: AnyPgTable & { id: any },
+  ) {}
+
+  async findById(id: TId): Promise<T['$inferSelect']> { ... }
+  async create(data: Partial<T['$inferInsert']>): Promise<TId> { ... }
+  async update(id: TId, values: Partial<T['$inferInsert']>): Promise<TId> { ... }
+
+  // Soft delete — never hard delete
+  async delete(id: TId, tx?: ConnectionType) {
+    const db = tx ?? this.db;
+    return db.update(this.table).set({ deleted: true } as any)
+      .where(eq(this.table.id, id as string)).execute();
+  }
+
+  async restore(id: TId, tx?: ConnectionType) {
+    const db = tx ?? this.db;
+    return db.update(this.table).set({ deleted: false } as any)
+      .where(eq(this.table.id, id as string)).execute();
+  }
+
+  async withTransaction<T>(fn: (tx: ConnectionType) => Promise<T>): Promise<T> {
+    return this.db.transaction(fn as any);
+  }
+}
+```
+
+Key rules: always soft delete (set `deleted: true`), accept optional `tx?: ConnectionType` on mutating methods, use `withTransaction` for multi-step operations.
+
+### tRPC Setup
+
+```ts
+export const t = initTRPC
+  .context<Context>()
+  .meta<OpenApiMeta>()
+  .create({
+    transformer: superjson,
+    errorFormatter: ({ shape }) => ({
+      ...shape,
+      data: {
+        ...shape.data,
+        stack: process.env.NODE_ENV === 'development' ? shape.data?.stack : undefined,
+      },
+    }),
+  });
+
+export const router = t.router;
+export const middleware = t.middleware;
+export const createCallerFactory = t.createCallerFactory;
+```
+
+### Project-Prefixed Error Classes
+
+Name error classes with the project prefix to avoid collisions:
+
+```ts
+export class PoachApiError extends Error {
+  public success: boolean;
+  public operational: boolean;
+  constructor(message: string, success = false, operational = true, stack = '') {
+    super(message);
+    this.name = 'PoachApiError';
+    this.success = success;
+    this.operational = operational;
+    if (stack) this.stack = stack;
+    else Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+export class PTRPCError extends TRPCError {
+  public timestamp: Date;
+  public requestId?: string;
+  constructor(params: ConstructorParameters<typeof TRPCError>[0] & { requestId?: string }) {
+    super(params);
+    this.timestamp = new Date();
+    this.requestId = params.requestId;
+  }
+}
+```
+
+### Winston Logger with Custom Levels
+
+Extend Winston with a custom level, module augmentation, and a DB transport helper:
+
+```ts
+import winston from 'winston';
+
+declare module 'winston' {
+  interface Logger {
+    db(message: string | Error, ...meta: any[]): Logger;
+  }
+}
+
+const customLevels = {
+  levels: { error: 0, warn: 1, info: 2, db: 3, debug: 4 },
+  colors: { error: 'red', warn: 'yellow', info: 'green', db: 'magenta', debug: 'blue' },
+};
+
+winston.addColors(customLevels.colors);
+
+export const logger = winston.createLogger({
+  levels: customLevels.levels,
+  level: process.env.NODE_ENV === 'development' ? 'debug' : 'db',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.printf(({ timestamp, level, message }) => `[${level}] ${timestamp}: ${message}`),
+  ),
+  transports: [new winston.transports.Console({ stderrLevels: ['error'] })],
+});
+```
+
+### Monorepo (Turborepo + pnpm)
+
+Large full-stack TypeScript projects use Turborepo + pnpm workspaces:
+
+```
+project/
+├── apps/
+│   ├── api/          # Express + tRPC
+│   └── ui/           # Next.js App Router
+├── packages/
+│   ├── schema/       # Drizzle ORM tables + drizzle-zod schemas
+│   ├── repository/   # BaseRepository + per-entity repos
+│   ├── service/      # per-entity *.service.ts
+│   ├── trpc/         # tRPC router + context + middleware
+│   ├── shared/       # branded-types, errors, constants, permissions
+│   ├── validator/    # Zod validators per entity
+│   ├── logger/       # Winston logger
+│   ├── email/        # email with provider pattern
+│   └── telemetry/    # OpenTelemetry
+├── cdk/              # AWS CDK infra (if cloud-deployed)
+├── turbo.json
+└── pnpm-workspace.yaml
+```
+
+Package naming: `@projectname/schema`, `@projectname/repository`, etc.
 
 ---
 

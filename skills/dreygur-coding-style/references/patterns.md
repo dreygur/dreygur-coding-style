@@ -45,6 +45,62 @@ export const infoLog  = (message: string, data?: Record<string, unknown>) => ...
 export const warnLog  = (message: string, data?: Record<string, unknown>) => ...;
 ```
 
+### Branded ID Types
+
+One branded type per entity, defined in `shared/branded-types.ts`. Use `assertValidId<T>` at HTTP boundaries (req.params), `asBrand<T>` only at trusted internal casting points:
+
+```ts
+// Define
+export type UserId = Brand<string, 'UserId'>;
+
+// Validate at boundary
+const userId = assertValidId<UserId>(req.params.id, 'UserId');
+
+// Cast trusted internal value
+const userId = asBrand<UserId>(dbRow.id);
+```
+
+Never use `string` for entity IDs in service/repository signatures.
+
+### Drizzle + drizzle-zod Schema Co-location
+
+Every table file exports: the table, `TEntity`, `TEntityInsert`, and three Zod schemas:
+
+```ts
+export const jobs = pgTable('job', { ... });
+export type TJob = typeof jobs.$inferSelect;
+export type TJobInsert = typeof jobs.$inferInsert;
+export const ZJobCreate = createInsertSchema(jobs);
+export const ZJobUpdate = createUpdateSchema(jobs);
+export const ZJobSelect = createSelectSchema(jobs);
+```
+
+### Soft Delete Pattern
+
+Never hard delete. `BaseRepository.delete()` sets `{ deleted: true }`. Add a `restore()` that sets `{ deleted: false }`. All list queries must filter `where(eq(table.deleted, false))`.
+
+### tRPC + Express Integration
+
+Register two route namespaces: `/v1` for REST, `/trpc` for tRPC. Dev-only routes (swagger, trpc-playground) gated on `process.env.NODE_ENV === 'development'`:
+
+```ts
+app.use('/v1', routes);
+app.use('/trpc', createExpressMiddleware({ router: appRouter, createContext: createTRPCContext }));
+if (process.env.NODE_ENV === 'development') {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+}
+```
+
+### CORS from Env
+
+Never hardcode CORS origins. Parse from env, support comma-separated list:
+
+```ts
+const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .split(',').map(o => o.trim());
+app.use(cors({ origin: corsOrigins, credentials: true }));
+```
+
 ### Anti-Patterns to Avoid (TS/JS)
 
 - `catch (e) {}` — never swallow
@@ -54,6 +110,8 @@ export const warnLog  = (message: string, data?: Record<string, unknown>) => ...
 - Missing semicolons
 - Hardcoded URLs, tokens, or secrets
 - Business logic inside `index.ts` — it's only a barrel
+- Plain `string` for entity IDs — use branded types
+- Hard deletes — always soft delete with `deleted` flag
 
 ---
 
