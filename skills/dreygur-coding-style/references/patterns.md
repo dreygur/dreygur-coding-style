@@ -115,6 +115,48 @@ app.use(cors({ origin: corsOrigins, credentials: true }));
 
 ---
 
+---
+
+## PHP / Laravel
+
+### Field Type Auto-Detection
+
+In `HasCrud`, guess field type from name patterns first, then fall back to DB column type. Priority order:
+
+1. `*_id` suffix → `select` (relationship)
+2. `email` / `password` / `url` → typed input
+3. `is_*` / `has_*` / `can_*` → `boolean`
+4. contains `description`/`bio`/`body` → `textarea`, `hide_in_index: true`
+5. contains `image`/`photo`/`file` → `file`, `hide_in_index: true`
+6. DB column type → `boolean`/`integer`/`decimal`/`text`/`date`/`datetime`
+7. Default → `text`
+
+### Reflection-Based Model Discovery
+
+Scan `app/Models/` with `RecursiveIteratorIterator` to find models using a trait. Cache the result in a `static` variable:
+
+```php
+protected function getModelsWithTrait($trait): array {
+    static $cachedModels = null;
+    if ($cachedModels !== null) return $cachedModels;
+    // scan app_path('Models') ...
+    return $cachedModels = $models;
+}
+```
+
+### Anti-Patterns to Avoid (PHP)
+
+- Business logic in `register()` — only bindings there
+- Hardcoded strings where config key + default should be used
+- Single monolithic `publishes()` group — split by concern
+- Commands defined inline — always separate class per command
+- Auth/role checks duplicated across controllers — move to BaseController or middleware
+- `echo` / `var_dump` in library code
+- No PHPDoc on public methods
+- Missing `runningInConsole()` guard before registering commands
+
+---
+
 ## Go
 
 ### Variadic Field Validator

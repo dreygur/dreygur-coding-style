@@ -1,12 +1,12 @@
 ---
 name: dreygur-coding-style
-description: This skill should be used when writing any code for dreygur — Go, TypeScript, JavaScript, Rust, or Python. Use when the user asks to "write code in my style", "follow my coding patterns", "use my architecture", "create a new project", "add a service", "add a repository", "write a handler", or whenever generating code that should match dreygur's established patterns. Also use when reviewing existing code for style violations.
-version: 2.1.0
+description: This skill should be used when writing any code for dreygur — Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel. Use when the user asks to "write code in my style", "follow my coding patterns", "use my architecture", "create a new project", "add a service", "add a repository", "write a handler", or whenever generating code that should match dreygur's established patterns. Also use when reviewing existing code for style violations.
+version: 2.2.0
 ---
 
 # dreygur Coding Style Guide
 
-Derived empirically from dreygur's open-source projects across Go, TypeScript, Rust, and Python. Apply these rules silently when writing code, call out style decisions when they're non-obvious, and flag violations when reviewing code.
+Derived empirically from dreygur's open-source projects across Go, TypeScript, Rust, Python, and PHP/Laravel. Apply these rules silently when writing code, call out style decisions when they're non-obvious, and flag violations when reviewing code.
 
 ## Universal Rules (All Languages)
 
@@ -19,21 +19,22 @@ Define contracts before implementations. Types live in a dedicated file:
 - Go: `models/requests.go`, `models/responses.go`
 - Rust: `crates/*/src/lib.rs` or a `types.rs`
 - Python: base class or dataclasses before subclasses
+- PHP: interface files or abstract base classes in `src/Contracts/` or `src/Support/`
 
 ### 2. Service Provider / Clean Architecture
 
 Always layer code into:
 
-| Layer | TS/JS | Go | Rust | Python |
-|---|---|---|---|---|
-| Types/Models | `types.ts`, `models/` | `models/` | `types.rs`, structs | base class / dataclasses |
-| Services | `*.service.ts` | `methods/`, `api/` | `src/*/manager.rs` | class methods |
-| Repositories | `*.repository.ts` | `db/`, `repo/` | `src/*/store.rs` | class with DB methods |
-| Handlers/Controllers | `*.handler.ts` | `handlers/`, `cmds/` | `src/cli/` | route functions |
-| Middleware/Hooks | `*.middleware.ts` | `hooks/` | `src/*/middleware.rs` | decorators / wrappers |
-| Strategies | `*.strategy.ts` | (pattern in methods/) | `src/*/strategy.rs` | — |
-| Utils | `utils/` | `utils/`, `lib/` | `src/util/` | helpers |
-| Config/Constants | `config.ts`, `constants.ts` | `common/vars.go`, `lib/settings.go` | `src/config/` | `constants.py` |
+| Layer | TS/JS | Go | Rust | Python | PHP |
+|---|---|---|---|---|---|
+| Types/Models | `types.ts`, `models/` | `models/` | `types.rs`, structs | base class / dataclasses | `src/Support/`, Eloquent models |
+| Services | `*.service.ts` | `methods/`, `api/` | `src/*/manager.rs` | class methods | `src/Services/` |
+| Repositories | `*.repository.ts` | `db/`, `repo/` | `src/*/store.rs` | class with DB methods | Eloquent + Concerns |
+| Handlers/Controllers | `*.handler.ts` | `handlers/`, `cmds/` | `src/cli/` | route functions | `src/Http/Controllers/` |
+| Middleware/Hooks | `*.middleware.ts` | `hooks/` | `src/*/middleware.rs` | decorators / wrappers | `src/Http/Middleware/` |
+| Strategies | `*.strategy.ts` | (pattern in methods/) | `src/*/strategy.rs` | — | — |
+| Utils | `utils/` | `utils/`, `lib/` | `src/util/` | helpers | `src/Support/` |
+| Config/Constants | `config.ts`, `constants.ts` | `common/vars.go`, `lib/settings.go` | `src/config/` | `constants.py` | `config/*.php` |
 
 ### 3. Custom Error Hierarchy
 
@@ -922,6 +923,241 @@ def init_payment(self) -> Dict:
 def set_mode(is_sandbox: bool) -> str:
   return 'sandbox' if is_sandbox else 'securepay'
 ```
+
+---
+
+## PHP / Laravel
+
+### Package Structure
+
+```
+package-name/
+├── src/
+│   ├── Http/
+│   │   ├── Controllers/      # BaseController + per-resource controllers
+│   │   └── Middleware/       # per-concern middleware classes
+│   ├── Providers/
+│   │   └── PackageServiceProvider.php
+│   ├── Concerns/             # Eloquent model traits (HasCrud, etc.)
+│   ├── Traits/               # other PHP traits
+│   ├── Services/             # service classes
+│   └── Support/              # helpers, route helpers, value objects
+├── config/
+│   └── package-name.php      # all config with defaults
+├── database/
+│   └── migrations/
+├── resources/
+│   └── views/
+├── routes/
+│   └── web.php
+└── composer.json
+```
+
+### ServiceProvider Pattern
+
+Split `boot()` into protected methods — one per concern. Never write business logic directly in `register()`/`boot()`:
+
+```php
+class PackageServiceProvider extends ServiceProvider {
+    public function register(): void {
+        $this->mergeConfigFrom(__DIR__.'/../../config/package.php', 'package');
+    }
+
+    public function boot(): void {
+        $this->registerPublishing();
+        $this->loadMigrationsFrom(__DIR__.'/../../database/migrations');
+        $this->registerRoutes();
+        $this->registerViews();
+        $this->registerViewComposers();
+        $this->registerMiddleware();
+        $this->registerCommands();
+        $this->registerEventListeners();
+    }
+
+    protected function registerRoutes(): void { ... }
+    protected function registerViews(): void { ... }
+    protected function registerViewComposers(): void { ... }
+    protected function registerMiddleware(): void { ... }
+    protected function registerCommands(): void { ... }
+    protected function registerPublishing(): void { ... }
+    protected function registerEventListeners(): void { ... }
+}
+```
+
+### Config-Driven Design
+
+**Every configurable value uses `config('package.key', 'default')`** — never hardcode. This makes the package usable without touching the source:
+
+```php
+$userModel = config('tyro-dashboard.user_model', config('tyro.models.user', 'App\\Models\\User'));
+$adminRoles = config('tyro-dashboard.admin_roles', ['admin', 'super-admin']);
+$disk = config('tyro-dashboard.uploads.disk', 'public');
+```
+
+### Abstract BaseController
+
+Always an abstract base in packages with `protected` helpers for shared logic:
+
+```php
+abstract class BaseController extends Controller {
+    protected function getUserModel(): string {
+        return config('package.user_model', 'App\\Models\\User');
+    }
+
+    protected function isAdmin(): bool {
+        $user = auth()->user();
+        if (!$user || !method_exists($user, 'roleSlugs')) return false;
+        $adminRoles = config('package.admin_roles', ['admin', 'super-admin']);
+        return !empty(array_intersect($adminRoles, $user->roleSlugs()));
+    }
+
+    protected function getViewData(array $data = []): array {
+        return array_merge([
+            'branding' => config('package.branding'),
+            'isAdmin' => $this->isAdmin(),
+            'user' => auth()->user(),
+        ], $data);
+    }
+}
+```
+
+### Concerns vs Traits
+
+- `Concerns/` — Eloquent-related traits that add model behaviour (CRUD config, resource introspection)
+- `Traits/` — general PHP traits (profile photo, file handling)
+
+### HasCrud Concern
+
+Models include a `HasCrud` trait to expose resource configuration for admin interfaces. The trait auto-detects fields from `$fillable` + DB schema, detects relationships via Reflection:
+
+```php
+trait HasCrud {
+    public static function getResourceConfig(): array {
+        $instance = new static;
+        return [
+            'model'    => static::class,
+            'title'    => $instance->resourceTitle ?? ...,
+            'fields'   => $instance->resourceFields ?? static::getCachedFieldsOrGenerate($instance),
+            'roles'    => $instance->resourceRoles ?? [],
+            'readonly' => $instance->resourceReadonly ?? [],
+        ];
+    }
+
+    public static function getResourceKey(): string {
+        $instance = new static;
+        return $instance->resourceKey ??
+            Str::plural(Str::snake(class_basename(static::class)));
+    }
+}
+```
+
+### Caching Pattern
+
+Use `Cache::get/put` with a content-hash key to avoid stale cache on schema changes. Always clear old hash on update:
+
+```php
+$cacheKey = 'pkg_fields_'.md5($modelClass).'_'.md5(serialize($fillable));
+$cached = Cache::get($cacheKey);
+if ($cached !== null) return $cached;
+$fields = static::generateFields($instance);
+Cache::put($cacheKey, $fields, 21600); // 6 hours
+```
+
+### Route Groups
+
+Routes go in `routes/web.php`, loaded via ServiceProvider with config-driven prefix and middleware:
+
+```php
+Route::group([
+    'prefix' => config('package.routes.prefix', 'dashboard'),
+    'middleware' => config('package.routes.middleware', ['web', 'auth']),
+    'as' => 'dashboard.',
+], function () {
+    $this->loadRoutesFrom(__DIR__.'/../../routes/web.php');
+});
+```
+
+Dev/example routes gated on environment:
+
+```php
+if (!config('package.disable_examples', false) && !app()->environment('production')) {
+    Route::get('/components', [ComponentsController::class, 'components'])->name('components');
+}
+```
+
+### Granular Publishing
+
+Never one giant publish group. Separate groups for each concern so users only publish what they need:
+
+```php
+$this->publishes([__DIR__.'/../../config/package.php' => config_path('package.php')], 'package-config');
+$this->publishes([$viewsPath => resource_path('views/vendor/package')], 'package-views');
+$this->publishes([$viewsPath.'/partials/styles.blade.php' => ...], 'package-styles');
+$this->publishes([$viewsPath.'/partials/scripts.blade.php' => ...], 'package-scripts');
+// Combined group for convenience
+$this->publishes([...config + views...], 'package');
+```
+
+### Middleware Registration
+
+Alias middleware in ServiceProvider, don't rely on kernel registration:
+
+```php
+protected function registerMiddleware(): void {
+    $router = $this->app['router'];
+    $router->aliasMiddleware('package.admin', EnsureIsAdmin::class);
+    $router->pushMiddlewareToGroup('web', HandleImpersonation::class);
+}
+```
+
+### View Composers
+
+Share common data with all package views via composers — never pass it from every controller:
+
+```php
+View::composer(['package::*', 'dashboard.*'], function ($view) {
+    $view->with('user', auth()->user());
+    $view->with('dashboardRoute', DashboardRoute::class);
+});
+```
+
+### Console Commands
+
+One class per Artisan command. All registered in ServiceProvider, guarded by `runningInConsole()`:
+
+```php
+protected function registerCommands(): void {
+    if (!$this->app->runningInConsole()) return;
+    $this->commands([
+        InstallCommand::class,
+        MakeResourceCommand::class,
+        PublishCommand::class,
+        // ...
+    ]);
+}
+```
+
+### PHPDoc Comments
+
+Every public method gets a PHPDoc with `@param` and `@return`:
+
+```php
+/**
+ * Update the user's profile photo.
+ *
+ * @param  \Illuminate\Http\UploadedFile  $photo
+ * @return void
+ */
+public function updateProfilePhoto($photo): void {
+```
+
+### Naming Conventions
+
+- Classes: `PascalCase` with role suffix — `ResourceController`, `EnsureIsAdmin`, `HasCrud`, `HasProfilePhoto`
+- Methods: `camelCase` — `getResourceConfig()`, `registerViewComposers()`
+- Files: `PascalCase.php` matching class name
+- Config keys: `kebab-case.dot.notation` — `tyro-dashboard.admin_roles`
+- Blade views: `kebab-case.blade.php` in namespaced directory — `tyro-dashboard::partials.flash-messages`
 
 ---
 
