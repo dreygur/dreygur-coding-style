@@ -1,10 +1,47 @@
 ---
 name: dreygur-coding-style
-description: Use when writing any code for dreygur — Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", or when reviewing code for style violations.
-version: 2.6.0
+description: Use when writing any code for dreygur — Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, or when reviewing code for style violations.
+version: 2.7.0
 ---
 
 # dreygur Coding Style
+
+## The Shape of a File
+
+Poetry and a story at the same time. Poetry: nothing wasted, the shape on the page carries meaning. Story: it reads in order, each part following from the last. Ordering is the argument, not an accident.
+
+### 1. Dependencies Above, Composite Last
+A function's dependencies are defined **above** it, never below. Write the composite, then place everything it calls above it. Reading top to bottom, you never meet a name before its parts.
+
+```
+constants -> leaf helpers -> mid-level helpers -> public entry point
+```
+
+No forward references. New helper + new caller means the helper goes first. This is the **opposite** of the common Rust/Go habit of parking helpers at the bottom — do not follow that habit here.
+
+Exception: when inserting into an existing section that already reads caller-first, keep the local convention rather than reordering existing code.
+
+### 2. Constants Are the Rules of the Play
+Timeouts, ports, limits, fixed strings sit at the very top of the file, before any behavior.
+
+### 3. One File, One Purpose
+Prefer a new file over growing an existing one when the concern is distinct.
+
+### 4. Small Parts, Small Cast
+Each part sets up only what it needs, with a cast small enough to hold in mind at once.
+
+### 5. Never Label the Code
+No section-divider comments, no banner comments with dashes, no block labels — not even plain descriptive ones. The shape is meant to be **felt in how the code reads, never announced in the text**.
+
+```ts
+// ---------- Helpers ----------        // never
+// Scene: token refresh                 // never
+// The composite                        // never
+```
+
+A comment earns its place only by explaining **why** something is the way it is, or a non-obvious constraint. Doc comments on exported items still apply (Universal Rule 8) — those describe contract and intent, not layout.
+
+---
 
 ## Universal Rules
 
@@ -49,13 +86,30 @@ var Collection = &db.MongoDB{Address: os.Getenv("DB_URI")}
 
 ### 6. No Magic Values — constants/config files only
 ### 7. Never Swallow Errors — propagate with context
-### 8. Doc Comments on every exported item — comment the *why*
+### 8. Doc Comments on every exported item — comment the *why*, never the layout
 ### 9. Filenames
 - TS/JS: `kebab-case` + layer suffix — `token.service.ts`, `auth.middleware.ts`
 - Go: `snake_case.go` — `token.go`, `cmd_handler.go`
 - Rust: `snake_case.rs` — `error.rs`, `config_watcher.rs`
 - Python: `snake_case.py`
 - PHP: `PascalCase.php` matching class name
+
+### 10. No Casts to Silence the Type Checker
+Never wrap an expression to make an error go away — `/** @type {X} */ (expr)` in JS, `as any`/`as unknown as X` in TS. Every such cast is masking a real defect: a missing runtime guard, dead config, or a dynamic dispatch that should be explicit branches.
+
+Fix it by narrowing at runtime or fixing the declaration. Annotating a `const` on its own line is fine. Types belong in `types.ts` / `types/*.d.ts`, not inline at the call site.
+
+Only tolerated at a generic base-class boundary the type system genuinely cannot express (see `BaseRepository` below).
+
+### 11. Tests Prove Behavior, Not Signatures
+A clean `cargo build`, `tsc --noEmit`, or `go vet` is **not** evidence of correctness. Neither is a `no_run` doctest — it type-checks a signature and proves nothing.
+
+- Every new function gets a test that **executes** it and asserts on real behavior, including error paths.
+- Prefer hermetic tests that run in the default runner (`cargo test`, `pnpm test`, `go test ./...`) over ones needing live services; add a gated/`#[ignore]` integration test when the real contract matters.
+- Never report work as done on the strength of a successful compile.
+
+### 12. Test Doubles Are `mock`, Never `fake`
+`mock_cdp`, `MockTokenStore`, `mock_server.go`. Not `fake_*`.
 
 ---
 
@@ -862,6 +916,19 @@ protected function registerCommands(): void {
 - Services instantiated per-call instead of singleton export
 - `$_POST` without sanitization in PHP
 - Missing `defined('ABSPATH') || exit` in WP files
+- Helper defined *below* its caller
+- Constants buried mid-file instead of at the top
+- Section-divider or block-label comments (`// ---- Helpers ----`)
+- Casts that silence the type checker (`as any`, `/** @type {X} */ (expr)`)
+- New function with no test that actually runs it
+- Test doubles named `fake_*` instead of `mock_*`
+- Any AI/agent attribution in commits, comments, or docs
+
+## Commits & Attribution
+
+- **Never** add agent attribution anywhere — no `Co-Authored-By: Claude`, no "Generated with Claude Code", no robot footers. Not in commit messages, PR bodies, code comments, or docs. The history reads as dreygur's own work. Where the repo supports it, set `attribution.commit` and `attribution.pr` to `""` in `.claude/settings.json` rather than relying on memory.
+- Finish every outstanding request **before** committing. A commit is a checkpoint; reaching it with an open ask captures the wrong state.
+- No unrequested edits to `README` files. Requested prose goes in chat unless a file is named.
 
 ## Additional Resources
 - **`references/patterns.md`** — extended patterns and anti-patterns per language

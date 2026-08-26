@@ -1,5 +1,48 @@
 # Extended Patterns & Anti-Patterns
 
+## Universal — File Ordering
+
+Dependencies live above the function that uses them; the composite is last.
+
+```ts
+// wrong — caller first, helpers trailing
+export async function syncPlaylist(id: PlaylistId) {
+  const tracks = await fetchTracks(id);
+  return dedupe(tracks);
+}
+function fetchTracks(id: PlaylistId) { ... }
+function dedupe(tracks: Track[]) { ... }
+```
+
+```ts
+// right — constants, then leaves, then the composite
+const SYNC_TIMEOUT_MS = 30_000;
+
+function dedupe(tracks: Track[]) { ... }
+function fetchTracks(id: PlaylistId) { ... }
+
+export async function syncPlaylist(id: PlaylistId) {
+  const tracks = await fetchTracks(id);
+  return dedupe(tracks);
+}
+```
+
+Same in Rust and Go — do **not** follow the local habit of parking helpers at the bottom of the module.
+
+### Anti-Patterns to Avoid (Universal)
+
+| Avoid | Do instead |
+|---|---|
+| Helper below its caller | Helper above; composite last |
+| Constants declared where first used | All constants at file top |
+| `// ---------- Helpers ----------` | No label; let the ordering say it |
+| `// Scene:` / `// The composite` | Nothing — the shape is felt, not announced |
+| One catch-all module | New file per distinct concern |
+| `as any` to clear a type error | Runtime guard, or fix the declaration |
+| `fake_server`, `FakeStore` | `mock_server`, `MockStore` |
+| "Compiles cleanly, shipping it" | Test that executes the function and asserts behavior |
+
+
 ## TypeScript / JavaScript
 
 ### Mutex for Concurrent Operations

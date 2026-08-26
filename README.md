@@ -14,6 +14,7 @@ Works with Claude Code, Cursor, GitHub Copilot, Windsurf, and [many more agents]
 
 ## What it covers
 
+- **The shape of a file**: dependencies defined *above* their caller, composite last, constants at the top — the file reads in order, and never announces its own structure with banner comments
 - **Architecture**: Service / Repository / Handler / Strategy / Middleware layers in every language
 - **Types first**: Interfaces and types defined before implementations, in dedicated files
 - **Custom error hierarchy**: Named error types with codes and context — not raw strings
@@ -25,6 +26,10 @@ Works with Claude Code, Cursor, GitHub Copilot, Windsurf, and [many more agents]
 - **Always semicolons** in TypeScript/JavaScript
 - **2-space indentation** in Python
 - **Never swallow errors**
+- **No casts to silence the type checker**: no `as any`, no inline `/** @type {X} */` — narrow at runtime or fix the declaration
+- **Tests prove behavior**: a clean compile is not evidence; every function gets a test that runs it
+- **Test doubles are `mock`**, never `fake`
+- **No AI attribution** in commits, PRs, comments, or docs
 
 ## Update
 
