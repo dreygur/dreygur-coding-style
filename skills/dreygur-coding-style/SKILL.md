@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
-description: Use when writing any code for dreygur — Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, or when reviewing code for style violations.
-version: 2.7.0
+description: Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations.
+version: 2.8.0
 ---
 
 # dreygur Coding Style
@@ -17,7 +17,7 @@ A function's dependencies are defined **above** it, never below. Write the compo
 constants -> leaf helpers -> mid-level helpers -> public entry point
 ```
 
-No forward references. New helper + new caller means the helper goes first. This is the **opposite** of the common Rust/Go habit of parking helpers at the bottom — do not follow that habit here.
+No forward references. New helper + new caller means the helper goes first. This is the **opposite** of the common Rust/Go habit of parking helpers at the bottom. Do not follow that habit here.
 
 Exception: when inserting into an existing section that already reads caller-first, keep the local convention rather than reordering existing code.
 
@@ -31,7 +31,7 @@ Prefer a new file over growing an existing one when the concern is distinct.
 Each part sets up only what it needs, with a cast small enough to hold in mind at once.
 
 ### 5. Never Label the Code
-No section-divider comments, no banner comments with dashes, no block labels — not even plain descriptive ones. The shape is meant to be **felt in how the code reads, never announced in the text**.
+No section-divider comments, no banner comments with dashes, no block labels, not even plain descriptive ones. The shape is meant to be **felt in how the code reads, never announced in the text**.
 
 ```ts
 // ---------- Helpers ----------        // never
@@ -39,7 +39,7 @@ No section-divider comments, no banner comments with dashes, no block labels —
 // The composite                        // never
 ```
 
-A comment earns its place only by explaining **why** something is the way it is, or a non-obvious constraint. Doc comments on exported items still apply (Universal Rule 8) — those describe contract and intent, not layout.
+A comment earns its place only by explaining **why** something is the way it is, or a non-obvious constraint. Doc comments on exported items still apply (Universal Rule 8); those describe contract and intent, not layout.
 
 ---
 
@@ -61,7 +61,7 @@ Contracts before implementations.
 | Utils | `utils/` | `utils/`, `lib/` | `src/util/` | helpers | `src/Support/` |
 | Config | `constants.ts` | `common/vars.go` | `src/config/` | `constants.py` | `config/*.php` |
 
-### 3. Typed Errors — Never Raw Strings
+### 3. Typed Errors, Never Raw Strings
 - TS: class hierarchy extending `Error`
 - Go: sentinel vars `var ErrX = errors.New(...)`
 - Rust: `thiserror` enum
@@ -76,7 +76,7 @@ export const tokenService = new TokenService();
 var Collection = &db.MongoDB{Address: os.Getenv("DB_URI")}
 ```
 
-### 5. Leveled Logging — Never raw print/console.log in library code
+### 5. Leveled Logging, Never Raw print/console.log in Library Code
 | Language | Tool |
 |---|---|
 | Go | custom `PrintLog` + `fatih/color` (`[+]`/`[-]`/`[!]`/`[*]`) |
@@ -84,25 +84,25 @@ var Collection = &db.MongoDB{Address: os.Getenv("DB_URI")}
 | Rust | `tracing` (`info!`/`warn!`/`error!`/`debug!`) |
 | Python | stdlib `logging` |
 
-### 6. No Magic Values — constants/config files only
-### 7. Never Swallow Errors — propagate with context
-### 8. Doc Comments on every exported item — comment the *why*, never the layout
+### 6. No Magic Values: constants/config files only
+### 7. Never Swallow Errors: propagate with context
+### 8. Doc Comments on every exported item: comment the *why*, never the layout
 ### 9. Filenames
-- TS/JS: `kebab-case` + layer suffix — `token.service.ts`, `auth.middleware.ts`
-- Go: `snake_case.go` — `token.go`, `cmd_handler.go`
-- Rust: `snake_case.rs` — `error.rs`, `config_watcher.rs`
+- TS/JS: `kebab-case` + layer suffix, as in `token.service.ts`, `auth.middleware.ts`
+- Go: `snake_case.go`, as in `token.go`, `cmd_handler.go`
+- Rust: `snake_case.rs`, as in `error.rs`, `config_watcher.rs`
 - Python: `snake_case.py`
 - PHP: `PascalCase.php` matching class name
 
 ### 10. No Casts to Silence the Type Checker
-Never wrap an expression to make an error go away — `/** @type {X} */ (expr)` in JS, `as any`/`as unknown as X` in TS. Every such cast is masking a real defect: a missing runtime guard, dead config, or a dynamic dispatch that should be explicit branches.
+Never wrap an expression to make an error go away: `/** @type {X} */ (expr)` in JS, `as any`/`as unknown as X` in TS. Every such cast is masking a real defect: a missing runtime guard, dead config, or a dynamic dispatch that should be explicit branches.
 
 Fix it by narrowing at runtime or fixing the declaration. Annotating a `const` on its own line is fine. Types belong in `types.ts` / `types/*.d.ts`, not inline at the call site.
 
 Only tolerated at a generic base-class boundary the type system genuinely cannot express (see `BaseRepository` below).
 
 ### 11. Tests Prove Behavior, Not Signatures
-A clean `cargo build`, `tsc --noEmit`, or `go vet` is **not** evidence of correctness. Neither is a `no_run` doctest — it type-checks a signature and proves nothing.
+A clean `cargo build`, `tsc --noEmit`, or `go vet` is **not** evidence of correctness. Neither is a `no_run` doctest; it type-checks a signature and proves nothing.
 
 - Every new function gets a test that **executes** it and asserts on real behavior, including error paths.
 - Prefer hermetic tests that run in the default runner (`cargo test`, `pnpm test`, `go test ./...`) over ones needing live services; add a gated/`#[ignore]` integration test when the real contract matters.
@@ -169,9 +169,9 @@ export function getUserMessage(e: unknown): string {
 ### Rules
 - **Always semicolons**
 - `import type` for type-only imports
-- `async/await` everywhere — no `.then()/.catch()` chains
+- `async/await` everywhere, no `.then()/.catch()` chains
 - `index.ts` re-exports everything (`export * from "./services/token.service.js"`)
-- Classes: `PascalCase` + suffix — `TokenService`, `CredentialRepository`
+- Classes: `PascalCase` + suffix, as in `TokenService`, `CredentialRepository`
 - Instances: `camelCase`; Constants: `SCREAMING_SNAKE_CASE`
 
 ### Log Prefix (even without logger)
@@ -202,7 +202,7 @@ export function assertValidId<T extends Brand<string, any>>(value: unknown, idTy
 export type UserId = Brand<string, 'UserId'>;
 export type OrganizationId = Brand<string, 'OrganizationId'>;
 ```
-Never use plain `string` for entity IDs — always the specific branded type.
+Never use plain `string` for entity IDs. Always the specific branded type.
 
 ### Drizzle ORM Schema
 ```ts
@@ -557,7 +557,7 @@ class SSLCSession(SSLCommerz):
 defined('ABSPATH') || exit;  // top of EVERY PHP file
 ```
 
-#### Complex Plugin — `final` Singleton
+#### Complex Plugin: `final` Singleton
 ```php
 final class MyPlugin {
     private static $instance = null;
@@ -584,7 +584,7 @@ final class MyPlugin {
 MyPlugin::get_instance();
 ```
 
-#### Minimal Plugin — Direct `new`
+#### Minimal Plugin: Direct `new`
 Single-responsibility plugins skip singleton:
 ```php
 class SingleSession {
@@ -724,7 +724,7 @@ $app->run();
 ```
 `composer.json`: `"bin": ["bin/toolname"]`, `"require": {"symfony/console": "^5.2"}`
 
-#### Custom Application — Strip Unused Options
+#### Custom Application: Strip Unused Options
 ```php
 class ToolApplication extends Application {
     protected function getDefaultInputDefinition(): InputDefinition {
@@ -765,7 +765,7 @@ class InstallCommand extends Command {
     }
 }
 ```
-`$output->writeln()` — never `echo`. Return `Command::SUCCESS`/`Command::FAILURE`.
+`$output->writeln()`, never `echo`. Return `Command::SUCCESS`/`Command::FAILURE`.
 
 #### Cross-Platform + State
 ```php
@@ -894,14 +894,121 @@ protected function registerCommands(): void {
 ```
 
 #### Naming
-- Classes: `PascalCase` + role — `ResourceController`, `EnsureIsAdmin`, `HasCrud`
-- Config keys: `kebab-case.dot.notation` — `package.admin_roles`
-- Blade: `kebab-case.blade.php` namespaced — `package::partials.flash-messages`
+- Classes: `PascalCase` + role, as in `ResourceController`, `EnsureIsAdmin`, `HasCrud`
+- Config keys: `kebab-case.dot.notation`, as in `package.admin_roles`
+- Blade: `kebab-case.blade.php` namespaced, as in `package::partials.flash-messages`
 - PHPDoc `@param`/`@return` on every public method
 
 ---
 
-## Reviewing Code — Flag These
+## Writing Like a Human
+
+Every character that ships is text someone reads: comments, doc comments, README and docs, commit messages, PR bodies, error strings, CLI output, variable names, test names. All of it should read as if dreygur typed it. Generated-sounding prose is as much a defect as a swallowed error.
+
+### 1. No Em Dashes
+Never `—`. Not in code, comments, commits, docs, PR bodies, or chat about the work. It is the loudest machine tell there is.
+
+Rewrite instead:
+
+| Instead of | Write |
+|---|---|
+| `token expired — refresh first` | `token expired, refresh first` |
+| `Two modes — sandbox and live` | `Two modes: sandbox and live` |
+| `It fails silently — the caller never knows` | `It fails silently. The caller never knows.` |
+| `The retry — when enabled — wraps fetch` | `The retry, when enabled, wraps fetch` |
+
+Comma, colon, semicolon, parentheses, or a full stop. One of those always fits.
+
+Also out: `–` (en dash) outside numeric ranges, ` -- ` standing in for an em dash, `…` (write three periods, or nothing), curly quotes `“” ‘’` anywhere near code or config.
+
+### 2. Cut the Stock Vocabulary
+These words are not wrong, they are just what a model reaches for first. Reach past them.
+
+| Avoid | Use |
+|---|---|
+| delve into, dive into, explore | look at, read, check |
+| leverage, utilize | use |
+| robust, comprehensive, powerful | say what it actually does |
+| seamless, effortless, elegant | drop the adjective |
+| ensure that | make sure, or just the imperative |
+| it's worth noting, it's important to note | state the thing |
+| crucial, vital, essential | needed, required, or drop it |
+| in order to | to |
+| a wide range of, a variety of | name the range |
+| unlock, elevate, streamline, supercharge | describe the change |
+| additionally, furthermore, moreover | and, also, or start the sentence |
+
+### 3. No Antithesis Reflex
+Stop reaching for the contrast frame. `not just X, but Y`, `it isn't A, it's B`, `X isn't about A. It's about B.` Once in a long document is fine. Twice in a paragraph is a signature.
+
+```
+// wrong
+// This isn't a cache, it's a coalescer.
+// right
+// Coalesces concurrent refreshes so only one request goes out.
+```
+
+### 4. No Padding
+- No preamble restating the question or the task.
+- No closing paragraph summarizing what the reader just read.
+- No "Overview" / "Conclusion" / "Key Takeaways" headings on a document under two pages.
+- No hedging stack: pick a position, or say plainly that it depends and on what.
+- No apology or self-congratulation in commits, comments, or docs.
+
+### 5. Vary the Shape
+Uniform output reads generated even when every word is fine.
+
+- Do not make every list exactly three items.
+- Do not give every bullet a bolded lead-in and a colon.
+- Do not open consecutive sentences with the same construction.
+- Mix sentence lengths. A short one lands harder after a long one.
+- Prose is allowed. Not every explanation needs to become a table or a bullet list.
+
+### 6. No Emoji, No Decoration
+None in code, comments, commit messages, docs, or CLI output. The log prefixes `[+]` `[-]` `[!]` `[*]` are the whole visual vocabulary. No checkmark bullets, no banner ASCII art, no `🚀` in a README.
+
+### 7. Comments Are Notes, Not Narration
+A comment records why, or a constraint that is not visible in the code. It never restates the line below it, and it never announces structure (see The Shape of a File, rule 5).
+
+```go
+// wrong
+// Loop over the users and send each one an email.
+for _, u := range users { ... }
+
+// right
+// bKash rate-limits to 5 req/s per app key; batching keeps us under it.
+for _, batch := range chunk(users, 5) { ... }
+```
+
+Write them in the same clipped register as the code. Sentence fragments are fine. Trailing periods optional, but stay consistent within a file.
+
+### 8. Commit Messages Sound Like a Person
+- Imperative mood, present tense: `fix token refresh race`, not `Fixed` or `Fixes`.
+- Say what changed and, when it is not obvious, why. Skip the body entirely for a one-line change.
+- Never `This commit ...`, never a bulleted essay for a two-line diff, never a "Summary of changes" heading.
+- No em dashes in the subject or body.
+- No agent attribution of any kind (see Commits & Attribution).
+
+```
+# wrong
+feat: implement a comprehensive solution for token refresh — ensures seamless auth
+
+# right
+fix: coalesce concurrent token refreshes
+
+Two requests racing on an expired token each triggered a refresh and the
+second overwrote the first. Guard with the shared mutex.
+```
+
+### 9. Docs Assume a Reader With the Repo Open
+Skip the marketing paragraph. Skip "In today's fast-paced world". Open with what the thing does and the first command that runs it. Show real values in examples, not `foo` and `bar`. If a section only exists because documents usually have one, delete it.
+
+### 10. Identifiers and Strings Carry the Same Rule
+No thesaurus names (`orchestrateComprehensiveSync`). Name it what it does: `syncPlaylist`. Error messages state the failure and the input, with no apology and no exclamation mark: `invalid order id: %q`, not `Oops! Something went wrong with the order!`.
+
+---
+
+## Reviewing Code: Flag These
 
 - Missing types/interfaces for exported items
 - DB calls in handlers (wrong layer)
@@ -923,12 +1030,20 @@ protected function registerCommands(): void {
 - New function with no test that actually runs it
 - Test doubles named `fake_*` instead of `mock_*`
 - Any AI/agent attribution in commits, comments, or docs
+- Em dash anywhere: code, comment, doc, commit, PR body
+- Curly quotes, en dashes, or `...` characters in text
+- Stock model vocabulary (delve, leverage, robust, seamless, ensure that, it's worth noting)
+- `not just X, but Y` phrasing, or any repeated antithesis frame
+- Comment that restates the line below it
+- Commit subject in past tense, or a bulleted essay on a two-line diff
+- Emoji in code, commits, docs, or CLI output
+- Preamble or a summary paragraph on a doc that does not need one
 
 ## Commits & Attribution
 
-- **Never** add agent attribution anywhere — no `Co-Authored-By: Claude`, no "Generated with Claude Code", no robot footers. Not in commit messages, PR bodies, code comments, or docs. The history reads as dreygur's own work. Where the repo supports it, set `attribution.commit` and `attribution.pr` to `""` in `.claude/settings.json` rather than relying on memory.
+- **Never** add agent attribution anywhere. No `Co-Authored-By: Claude`, no "Generated with Claude Code", no robot footers. Not in commit messages, PR bodies, code comments, or docs. The history reads as dreygur's own work. Where the repo supports it, set `attribution.commit` and `attribution.pr` to `""` in `.claude/settings.json` rather than relying on memory.
 - Finish every outstanding request **before** committing. A commit is a checkpoint; reaching it with an open ask captures the wrong state.
 - No unrequested edits to `README` files. Requested prose goes in chat unless a file is named.
 
 ## Additional Resources
-- **`references/patterns.md`** — extended patterns and anti-patterns per language
+- **`references/patterns.md`**: extended patterns and anti-patterns per language, including before/after rewrites for machine-sounding prose

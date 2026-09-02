@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Alternative installer — no Node.js required.
+# Alternative installer, no Node.js required.
 # Prefer: npx skills add dreygur/dreygur-coding-style
 set -euo pipefail
 

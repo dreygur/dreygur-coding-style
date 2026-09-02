@@ -1,11 +1,11 @@
 # Extended Patterns & Anti-Patterns
 
-## Universal — File Ordering
+## Universal: File Ordering
 
 Dependencies live above the function that uses them; the composite is last.
 
 ```ts
-// wrong — caller first, helpers trailing
+// wrong: caller first, helpers trailing
 export async function syncPlaylist(id: PlaylistId) {
   const tracks = await fetchTracks(id);
   return dedupe(tracks);
@@ -15,7 +15,7 @@ function dedupe(tracks: Track[]) { ... }
 ```
 
 ```ts
-// right — constants, then leaves, then the composite
+// right: constants, then leaves, then the composite
 const SYNC_TIMEOUT_MS = 30_000;
 
 function dedupe(tracks: Track[]) { ... }
@@ -27,7 +27,7 @@ export async function syncPlaylist(id: PlaylistId) {
 }
 ```
 
-Same in Rust and Go — do **not** follow the local habit of parking helpers at the bottom of the module.
+Same in Rust and Go. Do **not** follow the local habit of parking helpers at the bottom of the module.
 
 ### Anti-Patterns to Avoid (Universal)
 
@@ -36,7 +36,7 @@ Same in Rust and Go — do **not** follow the local habit of parking helpers at 
 | Helper below its caller | Helper above; composite last |
 | Constants declared where first used | All constants at file top |
 | `// ---------- Helpers ----------` | No label; let the ordering say it |
-| `// Scene:` / `// The composite` | Nothing — the shape is felt, not announced |
+| `// Scene:` / `// The composite` | Nothing; the shape is felt, not announced |
 | One catch-all module | New file per distinct concern |
 | `as any` to clear a type error | Runtime guard, or fix the declaration |
 | `fake_server`, `FakeStore` | `mock_server`, `MockStore` |
@@ -146,15 +146,15 @@ app.use(cors({ origin: corsOrigins, credentials: true }));
 
 ### Anti-Patterns to Avoid (TS/JS)
 
-- `catch (e) {}` — never swallow
+- `catch (e) {}`: never swallow
 - `any` type without a comment explaining why
 - Default exports except for plugin entry points
 - Mixing `require()` and `import`
 - Missing semicolons
 - Hardcoded URLs, tokens, or secrets
-- Business logic inside `index.ts` — it's only a barrel
-- Plain `string` for entity IDs — use branded types
-- Hard deletes — always soft delete with `deleted` flag
+- Business logic inside `index.ts`: it's only a barrel
+- Plain `string` for entity IDs: use branded types
+- Hard deletes: always soft delete with `deleted` flag
 
 ---
 
@@ -189,11 +189,11 @@ protected function getModelsWithTrait($trait): array {
 
 ### Anti-Patterns to Avoid (PHP / Laravel)
 
-- Business logic in `register()` — only bindings there
+- Business logic in `register()`: only bindings there
 - Hardcoded strings where config key + default should be used
-- Single monolithic `publishes()` group — split by concern
-- Commands defined inline — always separate class per command
-- Auth/role checks duplicated across controllers — move to BaseController or middleware
+- Single monolithic `publishes()` group: split by concern
+- Commands defined inline: always a separate class per command
+- Auth/role checks duplicated across controllers: move to BaseController or middleware
 - `echo` / `var_dump` in library code
 - No PHPDoc on public methods
 - Missing `runningInConsole()` guard before registering commands
@@ -202,7 +202,7 @@ protected function getModelsWithTrait($trait): array {
 
 #### Hook Registration Location
 
-All hooks/filters in `__construct()` of the `Init` class or `init_hooks()` of the main class — never scattered across files:
+All hooks/filters in `__construct()` of the `Init` class or `init_hooks()` of the main class, never scattered across files:
 
 ```php
 public function __construct() {
@@ -214,8 +214,8 @@ public function __construct() {
 
 #### Static vs Instance Methods on Hooks
 
-- `[self::class, 'method']` — for static methods on filters that need no instance state
-- `[$this, 'method']` — for instance methods that need object properties
+- `[self::class, 'method']`: for static methods on filters that need no instance state
+- `[$this, 'method']`: for instance methods that need object properties
 
 #### Plugin Constants Pattern
 
@@ -251,17 +251,17 @@ wp_enqueue_script('my-handle', $src, [], time(), true);
 ### Anti-Patterns to Avoid (PHP / WordPress)
 
 - Missing `defined('ABSPATH') || exit` at top of file
-- Raw `$_POST`/`$_GET` — always `sanitize_text_field(wp_unslash(...))`
+- Raw `$_POST`/`$_GET`: always `sanitize_text_field(wp_unslash(...))`
 - User-facing strings without `__('string', 'text-domain')`
-- `curl_*` / Guzzle for HTTP — use `wp_remote_post()` / `wp_remote_get()`
+- `curl_*` / Guzzle for HTTP: use `wp_remote_post()` / `wp_remote_get()`
 - `error_log()` without `WP_DEBUG` guard
-- `catch (Exception $e)` — use `catch (Throwable $e)` for PHP 7+
+- `catch (Exception $e)`: use `catch (Throwable $e)` for PHP 7+
 - Non-final main plugin class (for complex plugins)
-- Multiple plugin singletons — one main class, one `get_instance()`
+- Multiple plugin singletons: one main class, one `get_instance()`
 - Hooks registered outside `__construct()` or `init_hooks()`
-- Hardcoded URLs or nonces in JS — always `wp_localize_script`
-- Missing `type="module"` on Vite/ES module scripts — use `script_loader_tag` filter
-- Using `Options API` in Vue SFCs — always `<script setup>` (Composition API)
+- Hardcoded URLs or nonces in JS: always `wp_localize_script`
+- Missing `type="module"` on Vite/ES module scripts: use the `script_loader_tag` filter
+- Using `Options API` in Vue SFCs: always `<script setup>` (Composition API)
 
 ### PHP CLI (Symfony Console) Patterns
 
@@ -281,7 +281,7 @@ Handles both global (`~/.composer/vendor`) and local installs.
 
 #### Typed Question Dispatch
 
-Never string-compare question type — use class constants:
+Never string-compare question type. Use class constants:
 
 ```php
 const QUESTION_INPUT        = 1;
@@ -289,15 +289,15 @@ const QUESTION_CONFIRMATION = 2;
 const QUESTION_CHOICE       = 3;
 ```
 
-Private `ask()` method switches on the constant — callers never touch Symfony Question classes directly.
+Private `ask()` method switches on the constant, so callers never touch Symfony Question classes directly.
 
 ### Anti-Patterns to Avoid (PHP CLI)
 
-- `echo` in commands — use `$output->writeln()`
+- `echo` in commands: use `$output->writeln()`
 - Missing `set_time_limit(0)` in CLI entry
 - No shebang (`#!/usr/bin/env php`) in bin file
 - bin file not listed in `composer.json` `"bin"` key
-- Question logic scattered inline — always a private `ask()` helper
+- Question logic scattered inline: always a private `ask()` helper
 - Not storing `$input`/`$output` as properties when helpers need them
 - Not stripping unused Symfony Console options (override `getDefaultInputDefinition()`)
 
@@ -318,7 +318,7 @@ func RequireNonEmpty(fields ...string) bool {
 
 ### URL Construction
 
-Use `url.ParseRequestURI` + path append — never raw string interpolation:
+Use `url.ParseRequestURI` + path append, never raw string interpolation:
 
 ```go
 u, _ := url.ParseRequestURI(baseURL)
@@ -353,9 +353,9 @@ defer func() {
 
 - `log.Fatal` outside of `main` or `cmd/`
 - Business logic directly in `main.go`
-- Switch statements for command dispatch — use `map[string]func`
-- Prefix-based Discord commands — always slash commands
-- Hard-coded credentials — use `os.Getenv` + `sample.env`
+- Switch statements for command dispatch: use `map[string]func`
+- Prefix-based Discord commands: always slash commands
+- Hard-coded credentials: use `os.Getenv` + `sample.env`
 
 ---
 
@@ -398,9 +398,9 @@ Crates are named by function: `mcp-client`, `mcp-server`, `mcp-types`, `mcp-prox
 
 ### Anti-Patterns to Avoid (Rust)
 
-- `.unwrap()` in library code — use `?` or explicit error handling
-- `println!` in library crates — use `tracing`
-- Putting all code in `main.rs` — split into modules
+- `.unwrap()` in library code: use `?` or explicit error handling
+- `println!` in library crates: use `tracing`
+- Putting all code in `main.rs`: split into modules
 - Skipping `thiserror` and using `Box<dyn Error>` in library code
 
 ---
@@ -436,6 +436,88 @@ from uuid import uuid4
 - 4-space indentation
 - Missing type hints on method signatures
 - Missing docstrings on public methods
-- `except Exception: pass` — never swallow
+- `except Exception: pass`: never swallow
 - Mutable default arguments (`def f(x=[])`)
-- Raw `print()` in library code — use `logging`
+- Raw `print()` in library code: use `logging`
+
+
+## Prose: Rewriting Machine-Sounding Text
+
+The rules live in SKILL.md under "Writing Like a Human". This is the drill.
+
+### Doc Comment
+
+```ts
+// wrong
+/**
+ * A robust and comprehensive utility that seamlessly handles token refresh —
+ * it's worth noting that this ensures concurrent callers are properly serialized.
+ */
+
+// right
+/**
+ * Refreshes the access token. Concurrent callers share one refresh; the rest
+ * wait on the mutex and read the new token.
+ */
+```
+
+What changed: no em dash, no `robust`/`comprehensive`/`seamlessly`/`ensures`, no `it's worth noting`. The second version says what the reader needs and stops.
+
+### README Opening
+
+````md
+<!-- wrong -->
+# TokenKit
+
+In today's fast-paced development landscape, managing authentication tokens
+can be a crucial challenge. TokenKit is a powerful, lightweight library that
+empowers developers to seamlessly handle token lifecycles — unlocking a
+frictionless auth experience.
+
+<!-- right -->
+# TokenKit
+
+Refreshes OAuth tokens and keeps concurrent callers from racing on it.
+
+```bash
+pnpm add tokenkit
+```
+````
+
+### Commit
+
+```
+# wrong
+feat: Added comprehensive error handling improvements
+
+This commit implements a robust solution that ensures errors are properly
+handled throughout the codebase. Key changes:
+- Added error handling
+- Improved reliability
+
+# right
+fix: wrap store errors with the failing key
+
+Callers got a bare "not found" with no way to tell which lookup failed.
+```
+
+### Chat and PR Bodies
+
+Same rules. State the change, the reason, and anything the reviewer would otherwise have to discover. No opening restatement of the ticket, no closing summary of the diff they can read.
+
+### Anti-Patterns to Avoid (Prose)
+
+| Avoid | Do instead |
+|---|---|
+| Em dash anywhere | Comma, colon, semicolon, parentheses, or a new sentence |
+| `–` outside a numeric range, `...` character, curly quotes | ASCII, or restructure |
+| `not just X, but Y` | Say Y |
+| `delve`, `leverage`, `robust`, `seamless`, `comprehensive` | Concrete verbs and nouns |
+| `it's worth noting that P` | `P` |
+| `In order to X` | `To X` |
+| Comment restating the next line | Comment the why, or delete it |
+| Every list exactly three items | However many there are |
+| Every bullet with a **bold lead-in:** | Bold only where it earns attention |
+| Closing "In summary" paragraph | End at the last real sentence |
+| Emoji in code, commits, docs, CLI output | `[+]` `[-]` `[!]` `[*]` and nothing else |
+| `Oops! Something went wrong!` | `invalid order id: %q` |

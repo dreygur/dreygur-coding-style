@@ -2,7 +2,7 @@
 
 A [Claude Code](https://claude.ai/code) skill that encodes dreygur's personal coding style across Go, TypeScript, JavaScript, Rust, and Python.
 
-Once installed, Claude automatically follows these patterns when writing or reviewing code — no prompting needed.
+Once installed, Claude automatically follows these patterns when writing or reviewing code, with no prompting needed.
 
 ## Install
 
@@ -14,10 +14,10 @@ Works with Claude Code, Cursor, GitHub Copilot, Windsurf, and [many more agents]
 
 ## What it covers
 
-- **The shape of a file**: dependencies defined *above* their caller, composite last, constants at the top — the file reads in order, and never announces its own structure with banner comments
+- **The shape of a file**: dependencies defined *above* their caller, composite last, constants at the top, so the file reads in order, and never announces its own structure with banner comments
 - **Architecture**: Service / Repository / Handler / Strategy / Middleware layers in every language
 - **Types first**: Interfaces and types defined before implementations, in dedicated files
-- **Custom error hierarchy**: Named error types with codes and context — not raw strings
+- **Custom error hierarchy**: Named error types with codes and context, not raw strings
 - **Singleton exports**: Services and repositories exported as initialized instances
 - **Leveled logging**: `debugLog`/`infoLog`/`warnLog` in TS, `PrintLog` in Go, `tracing` in Rust
 - **Constants/config in dedicated files**: No magic values inline
@@ -26,9 +26,11 @@ Works with Claude Code, Cursor, GitHub Copilot, Windsurf, and [many more agents]
 - **Always semicolons** in TypeScript/JavaScript
 - **2-space indentation** in Python
 - **Never swallow errors**
-- **No casts to silence the type checker**: no `as any`, no inline `/** @type {X} */` — narrow at runtime or fix the declaration
+- **No casts to silence the type checker**: no `as any`, no inline `/** @type {X} */`; narrow at runtime or fix the declaration
 - **Tests prove behavior**: a clean compile is not evidence; every function gets a test that runs it
 - **Test doubles are `mock`**, never `fake`
+- **Writing like a human**: no em dashes anywhere, no stock model vocabulary, no `not just X, but Y`,
+  no padding or summary paragraphs, no emoji. Applies to comments, docs, commits, and PR bodies
 - **No AI attribution** in commits, PRs, comments, or docs
 
 ## Update
@@ -54,7 +56,7 @@ curl -fsSL https://raw.githubusercontent.com/dreygur/dreygur-coding-style/main/i
 ```
 skills/
   dreygur-coding-style/
-    SKILL.md            # core skill — triggers and all style rules
+    SKILL.md            # core skill: triggers and all style rules
     references/
       patterns.md       # extended patterns and anti-patterns per language
 install.sh              # shell install / update (alternative to npx)
