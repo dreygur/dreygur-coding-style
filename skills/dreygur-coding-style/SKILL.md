@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
 description: Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations.
-version: 2.8.0
+version: 2.9.0
 ---
 
 # dreygur Coding Style
@@ -905,8 +905,8 @@ protected function registerCommands(): void {
 
 Every character that ships is text someone reads: comments, doc comments, README and docs, commit messages, PR bodies, error strings, CLI output, variable names, test names. All of it should read as if dreygur typed it. Generated-sounding prose is as much a defect as a swallowed error.
 
-### 1. No Em Dashes
-Never `—`. Not in code, comments, commits, docs, PR bodies, or chat about the work. It is the loudest machine tell there is.
+### 1. No Dashes
+Never `—`, never `–`, never a hyphen used as punctuation or as a word-joiner. Not in code, comments, commits, docs, PR bodies, or chat about the work. It is the loudest machine tell there is.
 
 Rewrite instead:
 
@@ -916,10 +916,15 @@ Rewrite instead:
 | `Two modes — sandbox and live` | `Two modes: sandbox and live` |
 | `It fails silently — the caller never knows` | `It fails silently. The caller never knows.` |
 | `The retry — when enabled — wraps fetch` | `The retry, when enabled, wraps fetch` |
+| `a well-known trade-off` | `a widely known tradeoff` |
+| `state-of-the-art` | `cutting edge` |
+| `a fine-grained check` | `a granular check` |
 
-Comma, colon, semicolon, parentheses, or a full stop. One of those always fits.
+Comma, colon, semicolon, parentheses, or a full stop. One of those always fits. For a compound word, either close it up (`tradeoff`, `nonblocking`) or say it as two words (`widely known`); never join it with a hyphen.
 
-Also out: `–` (en dash) outside numeric ranges, ` -- ` standing in for an em dash, `…` (write three periods, or nothing), curly quotes `“” ‘’` anywhere near code or config.
+Also out: ` -- ` standing in for an em dash, `…` (write three periods, or nothing), curly quotes `“” ‘’` anywhere near code or config.
+
+This is about prose, not code syntax. Structural hyphens stay exactly where the rest of this document already puts them: `kebab-case` filenames (Universal Rule 9), CLI flags like `--force`, and numeric ranges like `13-120`. Anywhere a hyphen is part of an identifier or a documented naming convention, it stays. Anywhere it is standing in for a comma, a colon, or gluing two words into an adjective, it goes.
 
 ### 2. Cut the Stock Vocabulary
 These words are not wrong, they are just what a model reaches for first. Reach past them.
@@ -986,7 +991,7 @@ Write them in the same clipped register as the code. Sentence fragments are fine
 - Imperative mood, present tense: `fix token refresh race`, not `Fixed` or `Fixes`.
 - Say what changed and, when it is not obvious, why. Skip the body entirely for a one-line change.
 - Never `This commit ...`, never a bulleted essay for a two-line diff, never a "Summary of changes" heading.
-- No em dashes in the subject or body.
+- No dashes in the subject or body: no em dash, no en dash, no hyphenated compound adjective.
 - No agent attribution of any kind (see Commits & Attribution).
 
 ```
@@ -1030,8 +1035,8 @@ No thesaurus names (`orchestrateComprehensiveSync`). Name it what it does: `sync
 - New function with no test that actually runs it
 - Test doubles named `fake_*` instead of `mock_*`
 - Any AI/agent attribution in commits, comments, or docs
-- Em dash anywhere: code, comment, doc, commit, PR body
-- Curly quotes, en dashes, or `...` characters in text
+- Dashes anywhere in prose: em dash, en dash, or a hyphen joining two words into a compound (code, comment, doc, commit, PR body)
+- Curly quotes or `...` characters in text
 - Stock model vocabulary (delve, leverage, robust, seamless, ensure that, it's worth noting)
 - `not just X, but Y` phrasing, or any repeated antithesis frame
 - Comment that restates the line below it

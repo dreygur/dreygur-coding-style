@@ -509,8 +509,8 @@ Same rules. State the change, the reason, and anything the reviewer would otherw
 
 | Avoid | Do instead |
 |---|---|
-| Em dash anywhere | Comma, colon, semicolon, parentheses, or a new sentence |
-| `–` outside a numeric range, `...` character, curly quotes | ASCII, or restructure |
+| Em dash, en dash, or hyphenated compound word | Comma, colon, semicolon, parentheses, a new sentence, or say the compound as two words / one closed word |
+| `...` character, curly quotes | ASCII, or restructure |
 | `not just X, but Y` | Say Y |
 | `delve`, `leverage`, `robust`, `seamless`, `comprehensive` | Concrete verbs and nouns |
 | `it's worth noting that P` | `P` |

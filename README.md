@@ -29,8 +29,9 @@ Works with Claude Code, Cursor, GitHub Copilot, Windsurf, and [many more agents]
 - **No casts to silence the type checker**: no `as any`, no inline `/** @type {X} */`; narrow at runtime or fix the declaration
 - **Tests prove behavior**: a clean compile is not evidence; every function gets a test that runs it
 - **Test doubles are `mock`**, never `fake`
-- **Writing like a human**: no em dashes anywhere, no stock model vocabulary, no `not just X, but Y`,
-  no padding or summary paragraphs, no emoji. Applies to comments, docs, commits, and PR bodies
+- **Writing like a human**: no dashes anywhere (em dash, en dash, or hyphenated compound words),
+  no stock model vocabulary, no `not just X, but Y`, no padding or summary paragraphs, no emoji.
+  Applies to comments, docs, commits, and PR bodies
 - **No AI attribution** in commits, PRs, comments, or docs
 
 ## Update
