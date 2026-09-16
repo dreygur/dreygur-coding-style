@@ -111,6 +111,114 @@ A clean `cargo build`, `tsc --noEmit`, or `go vet` is **not** evidence of correc
 ### 12. Test Doubles Are `mock`, Never `fake`
 `mock_cdp`, `MockTokenStore`, `mock_server.go`. Not `fake_*`.
 
+### 13. Bug Fixes Start With a Failing Test
+When the task is fixing a bug: write the test that reproduces it first, run it, watch it fail, then write the fix, then watch it pass. Never write the fix before the test exists. This is the one case where test-first is mandatory rather than a preference.
+
+---
+
+## AGENTS.md Rules
+
+General conventions dreygur runs across every language. These sit alongside Universal Rules above; where the two overlap, this section is the more specific instruction.
+
+### Say Less
+For anything a human reads (comment, commit message, reply to a prompt), use as few words as possible. Pick every word on purpose. Down to the point. Less is more.
+
+### No Superlatives, No Praise
+Never tell dreygur he's right, absolutely right, or anything else that sounds like flattery. State the cold hard truth: what's wrong, what's missing, what breaks.
+
+### Constants Over Magic Values
+Extract a recurring or meaningful literal into a named `const` or enum. Leave a self-explanatory one-off value inline, that's not clutter, it's a value used once. A value that comes from a spec (HTTP `200`, a protocol magic byte, a fixed header size) always gets a constant, even if it's used once, because the spec is the reason it can't change.
+
+### Flatten Nesting
+Avoid the arrow anti-pattern. Reach for early return and early continue before adding another level of `if`.
+
+```go
+// wrong
+func process(item *Item) error {
+    if item != nil {
+        if item.Valid() {
+            if item.Ready() {
+                return commit(item)
+            }
+        }
+    }
+    return nil
+}
+
+// right
+func process(item *Item) error {
+    if item == nil || !item.Valid() || !item.Ready() {
+        return nil
+    }
+    return commit(item)
+}
+```
+
+### Short Function Names
+Keep a function name under 30 characters. If it doesn't fit, the function is probably doing too much or the name is carrying detail that belongs in a doc comment instead.
+
+### Enums Over Boolean Parameters
+A bare `true`/`false` at a call site tells the reader nothing. Use an enum:
+
+```ts
+// wrong
+scheduleJob(job, true);
+
+// right
+scheduleJob(job, Priority.High);
+```
+
+### Let the Code Breathe
+Blank line between logical blocks: setup, then the operation, then the return. Not between every two statements, between distinct steps.
+
+### Comment the Block, Not the Line
+A block-level comment states what the block does and why, with an example or a small ASCII drawing when a system's shape is the point. This is about summarizing a block's purpose, not narrating individual lines, rule 7 (no line restates the line below it) still applies within the block.
+
+```go
+// Coalesces concurrent refreshes into one outbound request.
+//
+//   caller A ─┐
+//   caller B ─┼─> mutex.Lock() -> single refresh -> broadcast to all
+//   caller C ─┘
+func refreshToken() (*Token, error) { ... }
+```
+
+### Private by Default, Public by Approval
+Every field and function starts private. Widening a private member to internal or public is a design decision, not a formatting one, ask dreygur before making that change. Treat it as a breaking shift to the type's contract even if the compiler stays quiet.
+
+### Encapsulate the Low Level
+Raw hardware I/O, sector parsing, direct socket streams: these live behind a dedicated driver or abstraction layer. The rest of the application calls a clean, high-level API that speaks in domain concepts (`ReadSector(lba)`, not `ioctl(fd, ...)` scattered through business logic).
+
+### Layers Talk Only to Their Neighbor
+A controller or UI component never calls a database query, a raw hardware driver, or a low-level network client directly. It goes through the service layer immediately below it. No skipping a layer to save a hop, that hop is the boundary that makes the layer swappable.
+
+### Touch Only What the Task Requires
+Don't edit, comment, or reformat a block you didn't write or need to change for this feature. Minimize the diff. A drive-by comment on code you didn't touch is scope creep, not helpfulness.
+
+### Braces Always
+Even a one-line `if` gets `{}`. No exceptions for brevity.
+
+```go
+// wrong
+if err != nil
+    return err
+
+// right
+if err != nil {
+    return err
+}
+```
+
+### Commit Message Format
+
+1. Blank line between subject and body, always.
+2. Subject line under 50 characters, 72 is the hard ceiling.
+3. Capitalize the first letter of the subject.
+4. No period at the end of the subject line.
+5. Imperative mood in the subject: `Fix bug`, `Add feature`, never `Fixed` or `Adds`. Test: the subject must complete "If applied, this commit will ___."
+6. Wrap the body by hand at 72 characters.
+7. The body explains what and why, not how, the diff already shows how. State the context and reasoning that isn't visible in the code.
+
 ---
 
 ## TypeScript / JavaScript
@@ -1043,6 +1151,14 @@ No thesaurus names (`orchestrateComprehensiveSync`). Name it what it does: `sync
 - Commit subject in past tense, or a bulleted essay on a two-line diff
 - Emoji in code, commits, docs, or CLI output
 - Preamble or a summary paragraph on a doc that does not need one
+- Nested `if` three or more levels deep where early return would flatten it
+- Boolean parameter at a call site instead of an enum
+- Function name at or over 30 characters
+- A field or method made `public`/`internal` without being asked
+- A controller, handler, or UI component calling a DB query, driver, or raw socket directly, skipping the service layer
+- Missing `{}` on a single-line `if`
+- Comment or edit touching code unrelated to the current task
+- Bug-fix diff with no failing test that preceded it
 
 ## Commits & Attribution
 
