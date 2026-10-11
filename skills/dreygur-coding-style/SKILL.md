@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
-description: Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations.
-version: 2.9.0
+description: Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations. Also applies the Karpathy behavior guidelines: think before coding, simplicity first, surgical changes, goal driven execution.
+version: 2.10.0
 ---
 
 # dreygur Coding Style
@@ -218,6 +218,94 @@ if err != nil {
 5. Imperative mood in the subject: `Fix bug`, `Add feature`, never `Fixed` or `Adds`. Test: the subject must complete "If applied, this commit will ___."
 6. Wrap the body by hand at 72 characters.
 7. The body explains what and why, not how, the diff already shows how. State the context and reasoning that isn't visible in the code.
+
+---
+
+## Behavior: Karpathy Guidelines
+
+Behavioral guidelines against the common LLM coding mistakes, from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) (MIT, adapted from `multica-ai/andrej-karpathy-skills`). Full wrong/right examples for every principle: `references/behavior-examples.md`.
+
+The mistakes they target, in Karpathy's words:
+
+> The models make wrong assumptions on your behalf and just run along with them without checking. They don't manage their confusion, don't seek clarifications, don't surface inconsistencies, don't present tradeoffs, don't push back when they should.
+
+> They really like to overcomplicate code and APIs, bloat abstractions, don't clean up dead code... implement a bloated construction over 1000 lines when 100 would do.
+
+> They still sometimes change/remove comments and code they don't sufficiently understand as side effects, even if orthogonal to the task.
+
+**Tradeoff:** these bias toward caution over speed. For trivial tasks (a typo fix, an obvious one liner) use judgment; not every change needs the full rigor. The goal is fewer costly mistakes on non trivial work, not slower simple work.
+
+| Principle | Addresses |
+|---|---|
+| Think Before Coding | Wrong assumptions, hidden confusion, missing tradeoffs |
+| Simplicity First | Overcomplication, bloated abstractions |
+| Surgical Changes | Orthogonal edits, touching code you shouldn't |
+| Goal Driven Execution | Leverage through tests first, verifiable success criteria |
+
+### 1. Think Before Coding
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask rather than guess.
+- If multiple interpretations exist, present them. Don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity First
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+The test: would a senior engineer say this is overcomplicated? If yes, simplify. The overbuilt version is usually not wrong, it follows real patterns. The problem is timing: it adds complexity before it is needed, which makes the code harder to read, test, and get right. Solve today's problem simply, refactor when the second requirement actually arrives.
+
+### 3. Surgical Changes
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently (quote style, type hints, spacing, return shape).
+- If you notice unrelated dead code, mention it. Don't delete it.
+
+When your changes create orphans:
+- Remove imports, variables, and functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: every changed line traces directly to the user's request. Pairs with Touch Only What the Task Requires above.
+
+### 4. Goal Driven Execution
+**Define success criteria. Loop until verified.**
+
+Turn imperative tasks into verifiable goals:
+
+| Instead of | Transform to |
+|---|---|
+| "Add validation" | "Write tests for invalid inputs, then make them pass" |
+| "Fix the bug" | "Write a test that reproduces it, then make it pass" |
+| "Refactor X" | "Ensure tests pass before and after" |
+
+For multi step tasks, state a brief plan:
+
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") force constant clarification. Karpathy: "LLMs are exceptionally good at looping until they meet specific goals... Don't tell it what to do, give it success criteria and watch it go." Pairs with Universal Rule 13 (bug fixes start with a failing test).
+
+### Signs It Works
+- Fewer unnecessary changes in diffs; only requested changes appear.
+- Fewer rewrites from overcomplication; the code is simple the first time.
+- Clarifying questions come before implementation, not after mistakes.
+- Clean, minimal PRs with no drive by refactoring or "improvements".
+
+### Project Specific Additions
+These guidelines merge with project instructions. A project may add its own on top (strict mode, tests on every endpoint, follow the error pattern in `src/utils/errors.ts`). Project rules win where they conflict.
 
 ---
 
@@ -1159,6 +1247,11 @@ No thesaurus names (`orchestrateComprehensiveSync`). Name it what it does: `sync
 - Missing `{}` on a single-line `if`
 - Comment or edit touching code unrelated to the current task
 - Bug-fix diff with no failing test that preceded it
+- Silent assumption or silently chosen interpretation of an ambiguous request
+- Abstraction, option, or feature beyond what was asked (single use strategy classes, unrequested config, error handling for impossible cases)
+- Drive by edit: reformatted lines, changed quote style, added type hints or docstrings, rewritten comments outside the task
+- Pre-existing dead code deleted, or orphans from the change left behind
+- Task with no verifiable success criteria or no plan with verify steps
 
 ## Commits & Attribution
 
@@ -1168,3 +1261,4 @@ No thesaurus names (`orchestrateComprehensiveSync`). Name it what it does: `sync
 
 ## Additional Resources
 - **`references/patterns.md`**: extended patterns and anti-patterns per language, including before/after rewrites for machine-sounding prose
+- **`references/behavior-examples.md`**: wrong/right examples for each Karpathy principle
