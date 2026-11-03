@@ -32,6 +32,8 @@ Works with Claude Code, Cursor, GitHub Copilot, Windsurf, and [many more agents]
 - **Writing like a human**: no dashes anywhere (em dash, en dash, or hyphenated compound words),
   no stock model vocabulary, no `not just X, but Y`, no padding or summary paragraphs, no emoji.
   Applies to comments, docs, commits, and PR bodies
+- **Structured thinking** for judgment calls: restate, three interpretations, strongest case
+  against, then the final answer
 - **No AI attribution** in commits, PRs, comments, or docs
 
 ## Update

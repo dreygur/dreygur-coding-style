@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
-description: Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations. Also applies the Karpathy behavior guidelines: think before coding, simplicity first, surgical changes, goal driven execution.
-version: 2.10.0
+description: Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations. Also applies the Karpathy behavior guidelines: think before coding, simplicity first, surgical changes, goal driven execution. Applies structured thinking (restate, three interpretations, strongest counter case, final answer) to judgment and design questions.
+version: 2.11.0
 ---
 
 # dreygur Coding Style
@@ -306,6 +306,23 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ### Project Specific Additions
 These guidelines merge with project instructions. A project may add its own on top (strict mode, tests on every endpoint, follow the error pattern in `src/utils/errors.ts`). Project rules win where they conflict.
+
+---
+
+## Behavior: Structured Thinking
+
+Use for questions involving judgment, design choices, advice, recommendations, or any answer that depends on premises being correct. Skip it for mechanical retrieval: file searches, grep, fetches, lookups.
+
+Answer by completing these numbered sections in order. The final answer comes last.
+
+1. **Restate** the question in your own words.
+2. **Interpretations.** List three plausible interpretations of the question, naming the critical assumption of each. If the user's framing is one of them, name it as such; do not privilege it.
+3. **Strongest case against.** List the strongest case against the answer you are about to give. Construct a real counter case, not a strawman. If the strongest objection invalidates your prospective answer, revise the answer in section 4. Do not soften the objection.
+4. **Final answer.**
+
+The conclusion in section 4 must be consistent with what you wrote in sections 1 to 3. If they conflict, revise section 4. The earlier sections are committed claims; the final answer accommodates them.
+
+Pairs with Think Before Coding above: section 2 is where competing interpretations get surfaced instead of picked silently.
 
 ---
 
