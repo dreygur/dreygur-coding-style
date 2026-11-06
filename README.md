@@ -34,6 +34,9 @@ Works with Claude Code, Cursor, GitHub Copilot, Windsurf, and [many more agents]
   Applies to comments, docs, commits, and PR bodies
 - **Structured thinking** for judgment calls: restate, three interpretations, strongest case
   against, then the final answer
+- **Plan review with EGM**: plans and design docs go to fresh EGM reviewers before building.
+  The skill tells the agent how to install or update EGM, and falls back to the
+  workflow's own review when EGM cannot run
 - **No AI attribution** in commits, PRs, comments, or docs
 
 ## Update

@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
-description: Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations. Also applies the Karpathy behavior guidelines: think before coding, simplicity first, surgical changes, goal driven execution. Applies structured thinking (restate, three interpretations, strongest counter case, final answer) to judgment and design questions.
-version: 2.11.0
+description: Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations. Also applies the Karpathy behavior guidelines: think before coding, simplicity first, surgical changes, goal driven execution. Applies structured thinking (restate, three interpretations, strongest counter case, final answer) to judgment and design questions. Reviews plans and design docs with EGM before building, falling back to the workflow's own review when EGM cannot run.
+version: 2.12.0
 ---
 
 # dreygur Coding Style
@@ -323,6 +323,34 @@ Answer by completing these numbered sections in order. The final answer comes la
 The conclusion in section 4 must be consistent with what you wrote in sections 1 to 3. If they conflict, revise section 4. The earlier sections are committed claims; the final answer accommodates them.
 
 Pairs with Think Before Coding above: section 2 is where competing interpretations get surfaced instead of picked silently.
+
+---
+
+## Behavior: Plan Review
+
+Before building from a plan, spec, or design document, have it reviewed by reviewers that never saw the conversation. Use EGM (the Elephant Goldfish Model plugin, `egm@egm`) for this. This skill does not ship EGM; install or update it from its own marketplace.
+
+1. **Check.** Run `claude plugin list` and look for `egm@egm`, enabled.
+2. **Install if missing.**
+   ```bash
+   claude plugin marketplace add google/elephant-goldfish-model
+   claude plugin install egm@egm
+   ```
+3. **Update if present.**
+   ```bash
+   claude plugin marketplace update egm
+   claude plugin update egm@egm
+   ```
+   A fresh install or an update loads only after a restart. Tell dreygur to restart the session, and use the fallback for the plan in hand.
+4. **Run the review.** EGM skills set `disable-model-invocation: true`, so the `Skill` tool refuses them. Read `skills/egm-review/SKILL.md` from the installed plugin (`claude plugin details egm@egm` shows the path) and follow it in the same thread, passing the plan's path. Its reviewers are the `egm:egm-*` subagent types.
+
+Fall back to the review the current workflow already has when EGM cannot run: it is not installed and the install fails, it needs a restart, it is disabled, or the harness has no subagent tool. Fallback order:
+
+- The workflow's own review step (for example the superpowers builder check on a design, or the plan reviewer in writing plans).
+- No such step: one fresh general purpose subagent reads the plan cold and reports the questions it would need answered before building, ranked by impact.
+- No subagent tool: read the plan as that reviewer yourself, and say the review was not independent.
+
+State in one line which path ran and why.
 
 ---
 
