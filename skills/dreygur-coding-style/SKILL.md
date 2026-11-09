@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
 description: Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations. Also applies the Karpathy behavior guidelines: think before coding, simplicity first, surgical changes, goal driven execution. Applies structured thinking (restate, three interpretations, strongest counter case, final answer) to judgment and design questions. Reviews plans and design docs with EGM before building, falling back to the workflow's own review when EGM cannot run.
-version: 2.12.0
+version: 2.13.0
 ---
 
 # dreygur Coding Style
@@ -194,6 +194,26 @@ A controller or UI component never calls a database query, a raw hardware driver
 
 ### Touch Only What the Task Requires
 Don't edit, comment, or reformat a block you didn't write or need to change for this feature. Minimize the diff. A drive-by comment on code you didn't touch is scope creep, not helpfulness.
+
+### Native Tools for Files, Shell for Commands
+Read, search and change files with the agent's own file tools (Read, Edit,
+Write, Grep, Glob). Bash runs commands: git, pnpm, cargo, go, gh, docker,
+podman, psql.
+
+Never touch a file through the shell: no `cat`, `head`, `sed`, `awk`,
+`grep`, `find`, `echo >>` or heredocs. A file tool shows the change as a
+diff and fails loudly when the target text is missing; a shell edit does
+neither.
+
+A Python, Node or other script is allowed only when the native tools cannot
+do the job (binary formats such as `.xlsx`, parsing or counting across many
+files) or would cost clearly more (hundreds of identical edits, a large
+generated file). Say why in one line before running it.
+
+Put the same rule in every subagent brief. If Grep or Glob is missing from
+the session, say so instead of falling back silently; `git grep` and
+`git ls-files` through Bash are the allowed search fallback. Reads and edits
+stay on Read, Edit and Write.
 
 ### Braces Always
 Even a one-line `if` gets `{}`. No exceptions for brevity.
@@ -1297,6 +1317,7 @@ No thesaurus names (`orchestrateComprehensiveSync`). Name it what it does: `sync
 - Drive by edit: reformatted lines, changed quote style, added type hints or docstrings, rewritten comments outside the task
 - Pre-existing dead code deleted, or orphans from the change left behind
 - Task with no verifiable success criteria or no plan with verify steps
+- A file read, searched or edited through Bash, sed or heredocs, or a script used where the native file tools would do
 
 ## Commits & Attribution
 

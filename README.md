@@ -37,6 +37,8 @@ Works with Claude Code, Cursor, GitHub Copilot, Windsurf, and [many more agents]
 - **Plan review with EGM**: plans and design docs go to fresh EGM reviewers before building.
   The skill tells the agent how to install or update EGM, and falls back to the
   workflow's own review when EGM cannot run
+- **Native file tools**: read, search and edit files with the agent's own tools; Bash runs
+  commands, and scripts only when the native tools can't do the job or cost clearly more
 - **No AI attribution** in commits, PRs, comments, or docs
 
 ## Update
