@@ -1,7 +1,7 @@
 ---
 name: dreygur-coding-style
 description: 'Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations. Also applies the Karpathy behavior guidelines: think before coding, simplicity first, surgical changes, goal driven execution. Applies structured thinking (restate, three interpretations, strongest counter case, final answer) to judgment and design questions. Reviews plans and design docs with EGM before building, falling back to the workflow''s own review when EGM cannot run.'
-version: 2.13.1
+version: 2.13.2
 ---
 
 # dreygur Coding Style
@@ -81,7 +81,7 @@ var Collection = &db.MongoDB{Address: os.Getenv("DB_URI")}
 |---|---|
 | Go | custom `PrintLog` + `fatih/color` (`[+]`/`[-]`/`[!]`/`[*]`) |
 | TypeScript | `debugLog`/`infoLog`/`warnLog` wrappers or Winston |
-| Rust | `tracing` (`info!`/`warn!`/`error!`/`debug!`) |
+| Rust | `tracing` (`info!()`, `warn!()`, `error!()`, `debug!()`) |
 | Python | stdlib `logging` |
 
 ### 6. No Magic Values: constants/config files only
@@ -1028,10 +1028,12 @@ class InstallCommand extends Command {
 ```
 `$output->writeln()`, never `echo`. Return `Command::SUCCESS`/`Command::FAILURE`.
 
-#### Cross-Platform + State
+#### Shelling Out + State
 ```php
-$isWindows = in_array(PHP_OS, ['WIN32', 'Windows', 'WINNT']);
-passthru($isWindows ? "php -S {$domain}:80" : "sudo php -S {$domain}:80 -t {$domain}/");
+// Escape every interpolated value. Unprivileged port, never sudo.
+$host = escapeshellarg("{$domain}:8080");
+$root = escapeshellarg("{$domain}/");
+passthru("php -S {$host} -t {$root}");
 
 // State as JSON
 file_put_contents("{$name}.json", json_encode(['domain' => $domain], JSON_PRETTY_PRINT));
@@ -1270,7 +1272,7 @@ second overwrote the first. Guard with the shared mutex.
 Skip the marketing paragraph. Skip "In today's fast-paced world". Open with what the thing does and the first command that runs it. Show real values in examples, not `foo` and `bar`. If a section only exists because documents usually have one, delete it.
 
 ### 10. Identifiers and Strings Carry the Same Rule
-No thesaurus names (`orchestrateComprehensiveSync`). Name it what it does: `syncPlaylist`. Error messages state the failure and the input, with no apology and no exclamation mark: `invalid order id: %q`, not `Oops! Something went wrong with the order!`.
+No thesaurus names (`orchestrateComprehensiveSync`). Name it what it does: `syncPlaylist`. Error messages state the failure and the input, with no apology and no exclamation mark: `invalid order id: %q`, not `Oops! Something went wrong with the order`.
 
 ---
 
@@ -1285,7 +1287,7 @@ No thesaurus names (`orchestrateComprehensiveSync`). Name it what it does: `sync
 - Wrong filename casing
 - Missing TS/JS semicolons
 - 4-space indent in Python
-- Raw `console.log`/`print`/`println!` in library code
+- Raw `console.log`, `print`, `println!()` in library code
 - Services instantiated per-call instead of singleton export
 - `$_POST` without sanitization in PHP
 - Missing `defined('ABSPATH') || exit` in WP files

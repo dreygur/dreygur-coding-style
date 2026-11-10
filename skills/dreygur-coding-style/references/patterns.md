@@ -399,7 +399,7 @@ Crates are named by function: `mcp-client`, `mcp-server`, `mcp-types`, `mcp-prox
 ### Anti-Patterns to Avoid (Rust)
 
 - `.unwrap()` in library code: use `?` or explicit error handling
-- `println!` in library crates: use `tracing`
+- `println!()` in library crates: use `tracing`
 - Putting all code in `main.rs`: split into modules
 - Skipping `thiserror` and using `Box<dyn Error>` in library code
 
@@ -520,4 +520,4 @@ Same rules. State the change, the reason, and anything the reviewer would otherw
 | Every bullet with a **bold lead-in:** | Bold only where it earns attention |
 | Closing "In summary" paragraph | End at the last real sentence |
 | Emoji in code, commits, docs, CLI output | `[+]` `[-]` `[!]` `[*]` and nothing else |
-| `Oops! Something went wrong!` | `invalid order id: %q` |
+| `Oops! Something went wrong.` | `invalid order id: %q` |
