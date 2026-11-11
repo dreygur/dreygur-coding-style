@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.15.0
+Add Kysely client, schema, repository and migration patterns, and the rule for choosing between Drizzle and Kysely. Merge the duplicate Drizzle schema and logger sections in `references/typescript.md`.
+
 ## 2.14.1
 Merge the two branded ID sections in `references/typescript.md`.
 

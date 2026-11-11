@@ -102,7 +102,12 @@ const userId = asBrand<UserId>(dbRow.id);
 
 Never use plain `string` for entity IDs. Always the specific branded type, including in service and repository signatures.
 
-## Drizzle ORM Schema
+## Choosing the ORM
+Drizzle or Kysely. In an existing repo, use the one it already has. For a new project, ask dreygur.
+
+## Drizzle Schema
+Every table file exports the table, `TEntity`, `TEntityInsert`, and three Zod schemas from drizzle-zod:
+
 ```ts
 export const users = pgTable('user', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
@@ -140,6 +145,70 @@ export abstract class BaseRepository<T extends AnyPgTable & { id: any }, TId ext
 ```
 Always soft delete (`deleted: true`). Optional `tx?` on mutating methods.
 
+## Kysely Client
+`db/client.ts` is the one place a driver pool and a `Kysely` instance get built. One pool per process. Driver type parsing (TINYINT(1) as boolean, int8 as number) goes on that pool, never on the global driver.
+
+```ts
+export type Db = Kysely<Tables>;
+
+export function openDatabase(config: DbConfig): Database {
+  const pool = createPool({ ...config, timezone: TIMEZONE, connectionLimit: DB_POOL_SIZE, typeCast });
+  const db = new Kysely<Tables>({ dialect: new MysqlDialect({ pool: pool.pool }), plugins: [new CamelCasePlugin()] });
+  return { pool, db };
+}
+```
+
+`Transaction<Tables>` extends `Kysely<Tables>`, so a repository typed on `Db` runs inside a transaction unchanged. The service owns the transaction boundary.
+
+## Kysely Schema
+`db/schema.ts` holds one interface per table and a `Tables` map. Columns the database fills get `Generated<T>`. Row types are exported as `TEntity`:
+
+```ts
+interface ProductsTable {
+  id: string;
+  name: string;
+  createdAt: Date;
+  deleted: Generated<boolean>;
+}
+
+export interface Tables {
+  haatProducts: ProductsTable;
+}
+
+export type TProduct = Selectable<ProductsTable>;
+```
+
+Application code sees camelCase. Get there one way per repo: `CamelCasePlugin`, or a `columns` list that aliases each snake_case column (`"created_at as createdAt"`) and every read selects through.
+
+## Kysely Repository
+The repository takes the executor in its constructor and holds queries only. A predicate used by several queries becomes a helper above the class, typed on `ExpressionBuilder`:
+
+```ts
+type ProductsEb = ExpressionBuilder<Tables, "haatProducts">;
+
+function onSale(eb: ProductsEb) {
+  return eb.and([eb("deleted", "=", false), eb("status", "=", ProductStatus.Active)]);
+}
+
+export class ProductsRepository {
+  constructor(private readonly db: Db) {}
+
+  async findById(id: ProductId): Promise<TProduct | null> {
+    const row = await this.db.selectFrom("haatProducts").selectAll().where("id", "=", id).where("deleted", "=", false).executeTakeFirst();
+    return row ?? null;
+  }
+
+  async softDelete(id: ProductId): Promise<void> {
+    await this.db.updateTable("haatProducts").set({ deleted: true, updatedAt: new Date() }).where("id", "=", id).execute();
+  }
+}
+```
+
+A missing row comes back as `null`, never `undefined`. On Postgres, an update or insert uses `returning(...)` in one statement instead of read then write.
+
+## Kysely Migrations
+Plain SQL, numbered, applied in order by the project's own runner. The runner keeps a journal table, takes a database lock (`GET_LOCK` on MySQL, `pg_advisory_lock` on Postgres) so two processes never migrate at once, and records a version only after all its steps ran. Every step is safe to rerun (`IF NOT EXISTS`, or a catalog check first). A shipped migration is never edited; add a new one.
+
 ## tRPC Setup
 ```ts
 export const t = initTRPC.context<Context>().meta<OpenApiMeta>().create({
@@ -174,7 +243,9 @@ export class PTRPCError extends TRPCError {
 }
 ```
 
-## Winston Logger with Custom Levels
+## Logging
+Services log through Winston with a custom `db` level:
+
 ```ts
 declare module 'winston' { interface Logger { db(msg: string | Error, ...meta: any[]): Logger; } }
 
@@ -193,6 +264,15 @@ export const logger = winston.createLogger({
   ),
   transports: [new winston.transports.Console({ stderrLevels: ['error'] })],
 });
+```
+
+Where the host supplies its own log client (a plugin, an extension), wrap it in `utils/logger.ts` instead:
+
+```ts
+export const debugLog = (message: string, data?: Record<string, unknown>) =>
+  client.app.log({ body: { level: "debug", message, extra: data } }).catch(() => {});
+export const infoLog  = (message: string, data?: Record<string, unknown>) => ...;
+export const warnLog  = (message: string, data?: Record<string, unknown>) => ...;
 ```
 
 ## Monorepo (Turborepo + pnpm)
@@ -249,32 +329,9 @@ export async function fetchWithRetry(
 ): Promise<Response> { ... }
 ```
 
-## Logger Wrapper (not raw console)
-
-```ts
-// utils/logger.ts
-export const debugLog = (message: string, data?: Record<string, unknown>) =>
-  client.app.log({ body: { level: "debug", message, extra: data } }).catch(() => {});
-export const infoLog  = (message: string, data?: Record<string, unknown>) => ...;
-export const warnLog  = (message: string, data?: Record<string, unknown>) => ...;
-```
-
-## Drizzle + drizzle-zod Schema Co-location
-
-Every table file exports: the table, `TEntity`, `TEntityInsert`, and three Zod schemas:
-
-```ts
-export const jobs = pgTable('job', { ... });
-export type TJob = typeof jobs.$inferSelect;
-export type TJobInsert = typeof jobs.$inferInsert;
-export const ZJobCreate = createInsertSchema(jobs);
-export const ZJobUpdate = createUpdateSchema(jobs);
-export const ZJobSelect = createSelectSchema(jobs);
-```
-
 ## Soft Delete Pattern
 
-Never hard delete. `BaseRepository.delete()` sets `{ deleted: true }`. Add a `restore()` that sets `{ deleted: false }`. All list queries must filter `where(eq(table.deleted, false))`.
+Never hard delete. `BaseRepository.delete()` sets `{ deleted: true }`. Add a `restore()` that sets `{ deleted: false }`. All list queries must filter `where(eq(table.deleted, false))` in Drizzle, `.where("deleted", "=", false)` in Kysely.
 
 ## tRPC + Express Integration
 
