@@ -77,6 +77,8 @@ process.on('SIGHUP', (signal) => { console.log(`[+] ${signal} Exiting...`); proc
 ```
 
 ## Branded Types for Entity IDs
+One branded type per entity, defined in `shared/branded-types.ts`:
+
 ```ts
 export type Brand<T, B extends string> = T & { __brand: B };
 export function asBrand<T extends Brand<any, any>>(value: any): T { return value as T; }
@@ -87,7 +89,18 @@ export function assertValidId<T extends Brand<string, any>>(value: unknown, idTy
 export type UserId = Brand<string, 'UserId'>;
 export type OrganizationId = Brand<string, 'OrganizationId'>;
 ```
-Never use plain `string` for entity IDs. Always the specific branded type.
+
+Use `assertValidId<T>` at HTTP boundaries (`req.params`), `asBrand<T>` only at trusted internal casting points:
+
+```ts
+// Validate at boundary
+const userId = assertValidId<UserId>(req.params.id, 'UserId');
+
+// Cast trusted internal value
+const userId = asBrand<UserId>(dbRow.id);
+```
+
+Never use plain `string` for entity IDs. Always the specific branded type, including in service and repository signatures.
 
 ## Drizzle ORM Schema
 ```ts
@@ -245,23 +258,6 @@ export const debugLog = (message: string, data?: Record<string, unknown>) =>
 export const infoLog  = (message: string, data?: Record<string, unknown>) => ...;
 export const warnLog  = (message: string, data?: Record<string, unknown>) => ...;
 ```
-
-## Branded ID Types
-
-One branded type per entity, defined in `shared/branded-types.ts`. Use `assertValidId<T>` at HTTP boundaries (req.params), `asBrand<T>` only at trusted internal casting points:
-
-```ts
-// Define
-export type UserId = Brand<string, 'UserId'>;
-
-// Validate at boundary
-const userId = assertValidId<UserId>(req.params.id, 'UserId');
-
-// Cast trusted internal value
-const userId = asBrand<UserId>(dbRow.id);
-```
-
-Never use `string` for entity IDs in service/repository signatures.
 
 ## Drizzle + drizzle-zod Schema Co-location
 

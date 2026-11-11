@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.14.1
+Merge the two branded ID sections in `references/typescript.md`.
+
 ## 2.14.0
 - Rename the repo to `dreygur/skills`, the plugin to `dreygur` and the skill to `skill`: `/dreygur:skill` as a plugin, `/dreygur-skill` through npx.
 - Move each language's rules and patterns into its own reference file.
