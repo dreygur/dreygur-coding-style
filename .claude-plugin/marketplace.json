@@ -1,0 +1,17 @@
+{
+  "name": "dreygur",
+  "owner": {
+    "name": "Rakibul Yeasin",
+    "url": "https://dreygur.me"
+  },
+  "description": "dreygur's skills as an installable Claude Code plugin.",
+  "plugins": [
+    {
+      "name": "dreygur",
+      "source": "./",
+      "description": "File ordering, architecture, errors, testing, review and prose rules for Go, TypeScript, Rust, Python and PHP.",
+      "category": "development",
+      "keywords": ["style", "conventions", "testing", "code-review"]
+    }
+  ]
+}

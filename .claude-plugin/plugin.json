@@ -1,10 +1,11 @@
 {
-  "name": "dreygur-coding-style",
+  "name": "dreygur",
   "description": "dreygur's personal coding style guide for Go, TypeScript, JavaScript, Rust, Python, and PHP. Encodes file ordering, architecture patterns, naming conventions, error handling, logging, testing, prose style, and project structure derived from dreygur's open-source projects.",
   "author": {
-    "name": "dreygur",
-    "email": "ryeasin03@gmail.com"
+    "name": "Rakibul Yeasin",
+    "url": "https://dreygur.me"
   },
-  "version": "2.13.2",
-  "homepage": "https://github.com/dreygur/dreygur-coding-style"
+  "version": "2.14.0",
+  "homepage": "https://github.com/dreygur/skills",
+  "repository": "https://github.com/dreygur/skills"
 }

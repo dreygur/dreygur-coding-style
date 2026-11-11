@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SKILL_NAME="dreygur-coding-style"
+SKILL_NAME="dreygur-skill"
 DEST="${HOME}/.claude/skills/${SKILL_NAME}"
 
 GREEN='\033[0;32m'; NC='\033[0m'
