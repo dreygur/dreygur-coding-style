@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.14.3
+Table and column names are always snake_case, in Drizzle and Kysely; drop `CamelCasePlugin`.
+
 ## 2.14.2
 Add Kysely client, schema, repository and migration patterns, and the rule for choosing between Drizzle and Kysely. Merge the duplicate Drizzle schema and logger sections in `references/typescript.md`.
 

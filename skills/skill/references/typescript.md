@@ -106,7 +106,7 @@ Never use plain `string` for entity IDs. Always the specific branded type, inclu
 Drizzle or Kysely. In an existing repo, use the one it already has. For a new project, ask dreygur.
 
 ## Drizzle Schema
-Every table file exports the table, `TEntity`, `TEntityInsert`, and three Zod schemas from drizzle-zod:
+Every table file exports the table, `TEntity`, `TEntityInsert`, and three Zod schemas from drizzle-zod. Table and column names passed to Drizzle are SQL, so always snake_case: `createdAt: timestamp('created_at')`.
 
 ```ts
 export const users = pgTable('user', {
@@ -153,7 +153,7 @@ export type Db = Kysely<Tables>;
 
 export function openDatabase(config: DbConfig): Database {
   const pool = createPool({ ...config, timezone: TIMEZONE, connectionLimit: DB_POOL_SIZE, typeCast });
-  const db = new Kysely<Tables>({ dialect: new MysqlDialect({ pool: pool.pool }), plugins: [new CamelCasePlugin()] });
+  const db = new Kysely<Tables>({ dialect: new MysqlDialect({ pool: pool.pool }) });
   return { pool, db };
 }
 ```
@@ -161,30 +161,30 @@ export function openDatabase(config: DbConfig): Database {
 `Transaction<Tables>` extends `Kysely<Tables>`, so a repository typed on `Db` runs inside a transaction unchanged. The service owns the transaction boundary.
 
 ## Kysely Schema
-`db/schema.ts` holds one interface per table and a `Tables` map. Columns the database fills get `Generated<T>`. Row types are exported as `TEntity`:
+`db/schema.ts` holds one interface per table and a `Tables` map. Table and column names are SQL, so they stay snake_case exactly as in the database; no `CamelCasePlugin`. Columns the database fills get `Generated<T>`. Row types are exported as `TEntity`:
 
 ```ts
 interface ProductsTable {
   id: string;
   name: string;
-  createdAt: Date;
+  created_at: Date;
   deleted: Generated<boolean>;
 }
 
 export interface Tables {
-  haatProducts: ProductsTable;
+  haat_products: ProductsTable;
 }
 
 export type TProduct = Selectable<ProductsTable>;
 ```
 
-Application code sees camelCase. Get there one way per repo: `CamelCasePlugin`, or a `columns` list that aliases each snake_case column (`"created_at as createdAt"`) and every read selects through.
+Where the layers above want camelCase fields, the repository maps at its edge with a `columns` list that every read selects through (`"created_at as createdAt"`). Queries themselves always name the snake_case column.
 
 ## Kysely Repository
 The repository takes the executor in its constructor and holds queries only. A predicate used by several queries becomes a helper above the class, typed on `ExpressionBuilder`:
 
 ```ts
-type ProductsEb = ExpressionBuilder<Tables, "haatProducts">;
+type ProductsEb = ExpressionBuilder<Tables, "haat_products">;
 
 function onSale(eb: ProductsEb) {
   return eb.and([eb("deleted", "=", false), eb("status", "=", ProductStatus.Active)]);
@@ -194,12 +194,12 @@ export class ProductsRepository {
   constructor(private readonly db: Db) {}
 
   async findById(id: ProductId): Promise<TProduct | null> {
-    const row = await this.db.selectFrom("haatProducts").selectAll().where("id", "=", id).where("deleted", "=", false).executeTakeFirst();
+    const row = await this.db.selectFrom("haat_products").selectAll().where("id", "=", id).where("deleted", "=", false).executeTakeFirst();
     return row ?? null;
   }
 
   async softDelete(id: ProductId): Promise<void> {
-    await this.db.updateTable("haatProducts").set({ deleted: true, updatedAt: new Date() }).where("id", "=", id).execute();
+    await this.db.updateTable("haat_products").set({ deleted: true, updated_at: new Date() }).where("id", "=", id).execute();
   }
 }
 ```
@@ -366,3 +366,4 @@ app.use(cors({ origin: corsOrigins, credentials: true }));
 - Business logic inside `index.ts`: it's only a barrel
 - Plain `string` for entity IDs: use branded types
 - Hard deletes: always soft delete with `deleted` flag
+- camelCase table or column names in SQL, or `CamelCasePlugin`: columns are always snake_case
