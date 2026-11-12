@@ -12,7 +12,7 @@ npx skills add dreygur/skills
 
 Installs as `/dreygur-skill`. Works with Claude Code, Cursor, GitHub Copilot, Windsurf, and [many more agents](https://skills.sh).
 
-As a Claude Code plugin, which updates itself and installs as `/dreygur:skill`:
+As a Claude Code plugin, which updates itself. The `/` menu lists it as `/dreygur:dreygur-skill`, since Claude Code prefixes plugin skills with the plugin name, and typing `/dreygur-skill` still runs it:
 
 ```bash
 claude plugin marketplace add dreygur/skills

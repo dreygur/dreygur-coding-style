@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.14.4
+The skill is `dreygur-skill` everywhere. The plugin menu shows it as `/dreygur:dreygur-skill`, not `/dreygur:skill` as 2.14.0 said.
+
 ## 2.14.3
 Table and column names are always snake_case, in Drizzle and Kysely; drop `CamelCasePlugin`.
 

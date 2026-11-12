@@ -1,7 +1,7 @@
 ---
 name: dreygur-skill
 description: 'Use when writing any code for dreygur in Go, TypeScript, JavaScript, Rust, Python, or PHP/Laravel/WordPress. Trigger on "write code in my style", "follow my patterns", "use my architecture", "create a new project", "add a service/repository/handler", when ordering functions within a file, when writing tests or a commit message, when writing a README, doc, comment, or PR body that should not read as machine-written, or when reviewing code for style violations. Also applies the Karpathy behavior guidelines: think before coding, simplicity first, surgical changes, goal driven execution. Applies structured thinking (restate, three interpretations, strongest counter case, final answer) to judgment and design questions. Reviews plans and design docs with EGM before building, falling back to the workflow''s own review when EGM cannot run.'
-version: 2.14.3
+version: 2.14.4
 ---
 
 # dreygur Coding Style
